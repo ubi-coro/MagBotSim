@@ -1,0 +1,61 @@
+Training Parameters:
+  - Environment Parameters:
+    - num_movers: 1
+    - train_obstacle_mode: "curriculum"
+    - num_cycles: 160
+    - learn_jeark: False
+    - threshold_pos: 0.05
+    - layout_tiles: (3,3) # shape
+    - v_max: 2.0 # [m/s]
+    - a_max: 10.0 # [m/s²]
+    - j_max: 100.0 # [m/s³]
+    - collision_shape: "box"
+    - collision_size: [0.113/2 + 1e-6, 0.113/2 + 1e-6]
+    - collision_offset: 0.0
+    - collision_offset_wall: 0.0
+    - mover_params:
+      - size: [0.113 / 2, 0.113 / 2, 0.012/ 2]
+      - mass: 0.639
+  - Training Environments:
+    - num_training_envs: 50
+    - seeds: 0-49
+  - SAC:
+    - learning_rate:
+      - learning_rate_schedule: linear
+      - initial value: 1e-3
+      - total_timesteps: 3e6
+    - buffer_size: 1e6
+    - learning_starts: 1e4
+    - batch_size: 128
+    - tau: 0.05
+    - gamma: 0.95
+    - train_freq: 1
+    - gradient_steps: -1
+    - ent_coef: "auto"
+    - policy_kwargs:
+      - share_features_extractor: False
+      - net_arch: [128,256,64]
+      - n_critics: 2
+    - replay_buffer_class: HerReplayBuffer
+    - replay_buffer_kwargs:
+      - copy_info_dict: True
+      - n_sampled_goal: 4
+      - goal_selection_strategy: "future"
+    - seed: 0
+
+Evaluation Parameters:
+  - env_eval_seed: 42 # (+1 for each new episode)
+  - deterministic: True
+  - max_position_err: 0.05
+  - eval_obstacle_mode: "hard"
+
+Versions:
+  - Python: "3.13.9"
+  - StableBaselines3": "2.7.0"
+  - PyTorch": "2.6.0+cu124"
+  - GPUEnabled: True
+  - Numpy: "2.3.4"
+  - Gymnasium": "1.2.1"
+  - MuJoCo": "3.3.7"
+  - MagBotSim: "1.0.0"
+  - MagBotSimEnvironmentVersion: "v0"
