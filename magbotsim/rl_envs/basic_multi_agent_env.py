@@ -11,7 +11,7 @@ from magbotsim import BasicMagBotEnv
 
 
 class BasicMagBotMultiAgentEnv(BasicMagBotEnv, ParallelEnv):
-    """A base class for multi-agent reinforcement learning environments in the field of magnetic robotics that follow the PettingZoo
+    """A base class for multi-agent reinforcement learning environments in the field of Magnetic Robotics that follow the PettingZoo
     API. A more detailed explanation of all parameters can be found in the documentation of the ``BasicMagneticRoboticsEnv``.
 
     :param layout_tiles: the tile layout

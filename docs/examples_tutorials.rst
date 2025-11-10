@@ -18,6 +18,7 @@ Please use one of our :ref:`environments` as more extensive examples of how to u
    :maxdepth: 1
    :caption: Examples
 
+   examples_tutorials/example_sim2real_transfer
    examples_tutorials/custom_mover_mesh
    examples_tutorials/manual_control
    examples_tutorials/mujoco_state

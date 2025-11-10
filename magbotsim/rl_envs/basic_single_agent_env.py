@@ -15,7 +15,7 @@ from magbotsim import BasicMagBotEnv
 
 
 class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
-    """A base class for single-agent reinforcement learning environments in the field of magnetic robotics that follow the Gymnasium
+    """A base class for single-agent reinforcement learning environments in the field of Magnetic Robotics that follow the Gymnasium
     API. A more detailed explanation of all parameters can be found in the documentation of the ``BasicMagBotEnv``.
 
     :param layout_tiles: the tile layout

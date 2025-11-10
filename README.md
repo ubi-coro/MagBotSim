@@ -3,7 +3,7 @@
 <img src="https://github.com/ubi-coro/MagBotSim/raw/main/docs/images/visual_abstract.png" />
 
 MagBotSim is a library for physics-based simulation environments for motion planning 
-and object manipulation in the field of magnetic robotics. The main component of every environment is a 
+and object manipulation in the field of Magnetic Robotics. The main component of every environment is a 
 *magnetic levitation (MagLev)* system, which consists of two basic components, as shown in the Figure above. Firstly, 
 dynamically actuated shuttles as passive motor modules, so-called *movers*, consist of a housing and a complex permanent 
 magnet structure based on Halbach arrays on the lower side of the mover. Secondly, static motor modules, so-called *tiles*, 

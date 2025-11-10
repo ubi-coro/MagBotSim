@@ -20,6 +20,7 @@ Long-Horizon Global Trajectory Planning Environment
             allowfullscreen></iframe>
 
    </div>
+   <br>
 
 The ``LongHorizonGlobalTrajectoryPlanningEnv`` is a simple trajectory planning
 environment that should be understood as an example of how trajectory planning with

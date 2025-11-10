@@ -7,14 +7,6 @@ from magbotsim.rl_envs.object_manipulation.pushing.state_based_global_pushing_en
     StateBasedGlobalPushingEnv,
 )
 
-"""A simplified object pushing environment for basic manipulation tasks.
-
-    This environment is a preconfigured version of ``StateBasedObjectPushingEnv`` designed for
-    introductory object manipulation tasks and algorithm development. It simplifies the
-    problem by using only square box objects and position-only learning, making it ideal
-    for initial experimentation and baseline comparisons.
-    """
-
 
 class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
     """A simplified object pushing environment with a box to be pushed.

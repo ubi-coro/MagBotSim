@@ -16,7 +16,7 @@ INVALID_MOVER_SHAPE_ERROR = "Invalid mover shape. Supported shapes are: 'box', '
 
 
 class BasicMagBotEnv:
-    """A base class for reinforcement learning environments in the field of magnetic robotics that is based on MuJoCo.
+    """A base class for reinforcement learning environments in the field of Magnetic Robotics that is based on MuJoCo.
     Note that MuJoCo does not specify basic physical units (for a more detailed explanation, see
     https://mujoco.readthedocs.io/en/stable/overview.html#units-are-unspecified). Thus, this environment can be used with user-specific
     units. However, note that the units m and kg are used for the default parameters.

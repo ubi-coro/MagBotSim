@@ -19,6 +19,7 @@ State-Based Global Pushing Environment
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen></iframe>
     </div>
+    <br>
 
 The ``StateBasedGlobalPushingEnv`` is an object manipulation environment designed for reinforcement learning with MagLev systems.
 This environment allows agents to learn pushing tasks with various object shapes and supports both position-only and pose learning modes.
@@ -131,7 +132,7 @@ The environment supports six different object shapes:
 - **cylinder**: Cylindrical object
 - **t_shape**: T-shaped object composed of multiple box segments
 - **l_shape**: L-shaped object with vertical and horizontal segments
-- **plus_shape**: Plus/cross-shaped object with perpendicular segments
+- **plus_shape**: Plus/X-shaped object with perpendicular segments
 
 .. figure:: ../images/img_objects_isometric.png
    :align: center

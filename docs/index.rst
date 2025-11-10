@@ -8,13 +8,29 @@ MagBotSim Documentation
 |br|
 
 MagBotSim (Magnetic Robotics Simulation) is a library for physics-based simulation environments for motion planning 
-and object manipulation in the field of magnetic robotics. The main component of every environment is a 
+and object manipulation in the field of Magnetic Robotics. The main component of every environment is a 
 *magnetic levitation (MagLev)* system, which consists of two basic components, as shown in the Figure above. Firstly, 
 dynamically actuated shuttles as passive motor modules, so-called *movers*, consist of a housing and a complex permanent 
 magnet structure based on Halbach arrays on the lower side of the mover. Secondly, static motor modules, so-called *tiles*, 
 are the active component of the drive system. As shown in the Figure above, the tiles enable the coil-induced emission 
 of electromagnetic fields (yellow) that interact with the mover's field (blue). During operation, the movers hover above the 
-tiles and can be controlled in six dimensions by adjusting the currents in the coils contained in the tiles.
+tiles and can be controlled in six dimensions by adjusting the currents in the coils contained in the tiles. 
+
+A brief summary of our MagBotSim paper "MagBotSim: Physics-Based Simulation and Reinforcement Learning Environments for 
+Magnetic Robotics" (see :ref:`citation`) is shown in the following video:
+
+.. raw:: html
+
+   <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+
+      <iframe width="888" height="500"
+            src="https://www.youtube.com/embed/JrNsR8JR9yo?autoplay=1&mute=1&loop=1&playlist=JrNsR8JR9yo"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+   </div>
+
+|br|
 
 MagLev systems are already included in the first industrial applications. The most advanced systems available on the market 
 are `XBot <https://www.planarmotor.com/?r=0>`_ (Planar Motor), 
@@ -24,7 +40,7 @@ are `XBot <https://www.planarmotor.com/?r=0>`_ (Planar Motor),
 The industrial applications with MagLev systems typically focus on product transport and do not consider the 
 manipulation of objects. However, to increase productivity and exploit the full potential of MagLev systems, material flow and 
 manipulation should be combined in the future. Therefore, MagLev systems can be seen as a special kind of robot. Hence, we 
-introduce the more general term *magnetic robotics*.
+introduce the more general term *Magnetic Robotics*.
 
 MagBotSim is designed to match real-world applications, so that control policies can be transferred to real MagLev systems without 
 further training or calibration. Since the library is based on the `MuJoCo <https://mujoco.readthedocs.io/en/stable/overview.html>`_ 
@@ -145,8 +161,10 @@ The following example shows how to use a trained policy with an example environm
 
 Due to the use of standard RL APIs, MagBotSim is compatible with common RL libraries, such as `Stable-Baselines3 <https://stable-baselines3.readthedocs.io/en/master/>`_  
 or `Tianshou <https://tianshou.org/en/stable/>`_.
-The library contains a collection of existing RL environments in the field of magnetic robotics, which will continue to be updated in the future, as well as basic single-agent and 
+The library contains a collection of existing RL environments in the field of Magnetic Robotics, which will continue to be updated in the future, as well as basic single-agent and 
 multi-agent environments that serve as starting points for the easy development of new research-specific environments.
+
+.. _citation:
 
 Paper & Citation
 ^^^^^^^^^^^^^^^^
