@@ -268,8 +268,9 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         )
 
         # throughput
-        self.num_ms_success_first_time = -1
+        self.time_to_success_s = -1
         self.num_elapsed_cycles = 0
+        self.success_counter = 0
 
     def update_cached_actuator_mujoco_data(self) -> None:
         """Update all cached information about MuJoCo actuators, such as names and ids."""
@@ -528,8 +529,9 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         self.cm_measurement.reset()
 
         # reset throughput measurement
-        self.num_ms_success_first_time = -1
+        self.time_to_success_s = -1
         self.num_elapsed_cycles = 0
+        self.success_counter = 0
 
     def _before_mujoco_step_callback(self, action: np.ndarray) -> None:
         """Apply the next action, i.e. it sets the jerk or acceleration, ensuring the minimum and maximum velocity and acceleration
@@ -574,13 +576,17 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         self.cm_measurement.update_overshoot_corrections(current_object_pose=current_object_pose, object_target_pose=object_target_pose)
 
         # throughput
-        if self.num_ms_success_first_time == -1:
+        if self.success_counter < 150:
             self.num_elapsed_cycles += 1
             dist = self._calc_eucl_dist_xy(achieved_goal=current_object_pose, desired_goal=object_target_pose)
             assert dist.shape == (1,)
             is_success = bool((dist <= self.threshold_pos)[0])
             if is_success:
-                self.num_ms_success_first_time = self.num_elapsed_cycles
+                if self.success_counter == 0:
+                    self.time_to_success_s = self.num_elapsed_cycles * (1 / 1000)  # in s
+                self.success_counter += 1
+            else:
+                self.success_counter = 0
 
     def compute_terminated(
         self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: dict[str, Any] | None = None
@@ -772,7 +778,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
             'dist': dist,
             'num_overshoot_corrections': self.get_current_num_overshoot_corrections(),
             'num_distance_corrections': self.get_current_num_distance_corrections(),
-            'num_ms_success_first_time': self.num_ms_success_first_time,
+            'time_to_success_s': self.time_to_success_s,
         }
         info.update(collision_info)
         return info

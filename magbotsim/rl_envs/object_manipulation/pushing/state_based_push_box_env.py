@@ -1,3 +1,7 @@
+############################################################################
+# Copyright (c) 2024 Cedric Grothues & Lara Bergmann, Bielefeld University #
+############################################################################
+
 from typing import Any
 
 import numpy as np

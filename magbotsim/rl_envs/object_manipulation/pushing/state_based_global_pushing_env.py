@@ -1,6 +1,6 @@
-##########################################################
-# Copyright (c) 2024 Lara Bergmann, Bielefeld University #
-##########################################################
+############################################################################
+# Copyright (c) 2024 Cedric Grothues & Lara Bergmann, Bielefeld University #
+############################################################################
 
 from collections import OrderedDict
 from collections.abc import MutableMapping
@@ -283,8 +283,9 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         )
 
         # throughput
-        self.num_ms_success_first_time = -1
+        self.time_to_success_s = -1
         self.num_elapsed_cycles = 0
+        self.success_counter = 0
 
     def update_cached_actuator_mujoco_data(self) -> None:
         """Update all cached information about MuJoCo actuators, such as names and ids."""
@@ -623,8 +624,9 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.cm_measurement.reset()
 
         # reset throughput measurement
-        self.num_ms_success_first_time = -1
+        self.time_to_success_s = -1
         self.num_elapsed_cycles = 0
+        self.success_counter = 0
 
     def _before_mujoco_step_callback(self, action: np.ndarray) -> None:
         """Apply the next action, i.e. it sets the jerk or acceleration, ensuring the minimum and maximum velocity and acceleration
@@ -679,7 +681,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.cm_measurement.update_overshoot_corrections(current_object_pose=object_achieved_goal, object_target_pose=object_desired_goal)
 
         # throughput
-        if self.num_ms_success_first_time == -1:
+        if self.success_counter < 150:
             self.num_elapsed_cycles += 1
             object_geoms = None
             if self.learn_pose:
@@ -693,7 +695,11 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                 assert goal_reached.shape == (1,)
                 goal_reached = goal_reached[0]
             if goal_reached:
-                self.num_ms_success_first_time = self.num_elapsed_cycles
+                if self.success_counter == 0:
+                    self.time_to_success_s = self.num_elapsed_cycles * (1 / 1000)  # in s
+                self.success_counter += 1
+            else:
+                self.success_counter = 0
 
     def compute_terminated(
         self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: dict[str, Any] | None = None
@@ -1022,7 +1028,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                 'steps_at_goal': self.steps_at_goal,
                 'num_overshoot_corrections': self.get_current_num_overshoot_corrections(),
                 'num_distance_corrections': self.get_current_num_distance_corrections(),
-                'num_ms_success_first_time': self.num_ms_success_first_time,
+                'time_to_success_s': self.time_to_success_s,
             }
         )
 
