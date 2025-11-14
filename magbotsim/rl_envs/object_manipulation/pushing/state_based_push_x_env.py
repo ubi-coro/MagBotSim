@@ -13,8 +13,8 @@ from magbotsim.rl_envs.object_manipulation.pushing.state_based_global_pushing_en
 from magbotsim.utils.benchmark_utils import BENCHMARK_PUSHING_LAYOUTS, BENCHMARK_PUSHING_NUM_MOVERS
 
 
-class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
-    """A simplified object pushing environment with a box to be pushed.
+class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
+    """An environment for pushing an X shaped object, similar to :class:`StateBasedPushXEnv`.
 
     :param num_movers: the number of movers in the environment, defaults to 1
     :param mover_params: a dictionary that can be used to specify the mass and size of each mover using the keys 'mass' or 'size',
@@ -35,7 +35,7 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
         value, meaning the same standard deviation is used for all three values.
     :param render_mode: the mode that is used to render the frames ('human', 'rgb_array' or None), defaults to 'human'. If set to
         None, no viewer is initialized and used, i.e. no rendering. This can be useful to speed up training.
-    :param render_every_cycle:  whether to call 'render' after each integrator step in the ``step()`` method, defaults to False.
+    :param render_every_cycle: whether to call 'render' after each integrator step in the ``step()`` method, defaults to False.
         Rendering every cycle leads to a smoother visualization of the scene, but can also be computationally expensive. Thus, this
         parameter provides the possibility to speed up training and evaluation. Regardless of this parameter, the scene is always
         rendered after 'num_cycles' have been executed if ``render_mode != None``.
@@ -65,8 +65,8 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
         output.
     :param early_termination_steps: the number of consecutive steps at goal after which the episode terminates early, defaults to None
         (no early termination)
-    :param max_position_err: the position threshold used to determine whether the object has reached its goal position, defaults
-        to 0.05 [m]
+    :param max_position_err: the position threshold used to measure corrective movements, defaults to 0.05 [m]
+    :param min_coverage: the minimum coverage ratio for goal achievement when learn_pose=True, defaults to 0.95
     :param collision_penalty: the reward penalty applied when a collision occurs, defaults to -10.0
     :param per_step_penalty: the small negative reward applied at each time step to encourage efficiency, defaults to -0.01
     :param object_at_goal_reward: the positive reward given when the object reaches the goal without collisions, defaults to 1.0
@@ -93,7 +93,8 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
-        collision_penalty: float = -10,
+        min_coverage: float = 0.95,
+        collision_penalty: float = -10.0,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1.0,
         use_mj_passive_viewer: bool = False,
@@ -108,7 +109,7 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
             render_every_cycle=render_every_cycle,
             num_cycles=num_cycles,
             collision_params=collision_params,
-            object_type='square_box',
+            object_type='plus_shape',
             object_ranges=DEFAULT_OBJECT_RANGES,
             v_max=v_max,
             a_max=a_max,
@@ -116,10 +117,10 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
             object_sliding_friction=object_sliding_friction,
             object_torsional_friction=object_torsional_friction,
             learn_jerk=learn_jerk,
-            learn_pose=False,
+            learn_pose=True,
             early_termination_steps=early_termination_steps,
-            max_position_err=max_position_err,
-            min_coverage=0.0,
+            max_position_err=max_position_err,  # only used to measure corrective movements
+            min_coverage=min_coverage,
             collision_penalty=collision_penalty,
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
@@ -127,8 +128,8 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
         )
 
 
-class StateBasedPushBoxEnvB0(StateBasedPushBoxEnv):
-    """Benchmark 0 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB0(StateBasedPushXEnv):
+    """Benchmark 0 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -147,6 +148,7 @@ class StateBasedPushBoxEnvB0(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -170,6 +172,7 @@ class StateBasedPushBoxEnvB0(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -177,8 +180,8 @@ class StateBasedPushBoxEnvB0(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB1(StateBasedPushBoxEnv):
-    """Benchmark 1 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB1(StateBasedPushXEnv):
+    """Benchmark 1 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -197,6 +200,7 @@ class StateBasedPushBoxEnvB1(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -220,6 +224,7 @@ class StateBasedPushBoxEnvB1(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -227,8 +232,8 @@ class StateBasedPushBoxEnvB1(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB2(StateBasedPushBoxEnv):
-    """Benchmark 2 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB2(StateBasedPushXEnv):
+    """Benchmark 2 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -247,6 +252,7 @@ class StateBasedPushBoxEnvB2(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -270,6 +276,7 @@ class StateBasedPushBoxEnvB2(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -277,8 +284,8 @@ class StateBasedPushBoxEnvB2(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB3(StateBasedPushBoxEnv):
-    """Benchmark 3 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB3(StateBasedPushXEnv):
+    """Benchmark 3 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -297,6 +304,7 @@ class StateBasedPushBoxEnvB3(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -320,6 +328,7 @@ class StateBasedPushBoxEnvB3(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -327,8 +336,8 @@ class StateBasedPushBoxEnvB3(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB4(StateBasedPushBoxEnv):
-    """Benchmark 4 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB4(StateBasedPushXEnv):
+    """Benchmark 4 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -347,6 +356,7 @@ class StateBasedPushBoxEnvB4(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -370,6 +380,7 @@ class StateBasedPushBoxEnvB4(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -377,8 +388,8 @@ class StateBasedPushBoxEnvB4(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB5(StateBasedPushBoxEnv):
-    """Benchmark 5 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB5(StateBasedPushXEnv):
+    """Benchmark 5 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -397,6 +408,7 @@ class StateBasedPushBoxEnvB5(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -420,6 +432,7 @@ class StateBasedPushBoxEnvB5(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -427,8 +440,8 @@ class StateBasedPushBoxEnvB5(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB6(StateBasedPushBoxEnv):
-    """Benchmark 6 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB6(StateBasedPushXEnv):
+    """Benchmark 6 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -447,6 +460,7 @@ class StateBasedPushBoxEnvB6(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -470,6 +484,7 @@ class StateBasedPushBoxEnvB6(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -477,8 +492,8 @@ class StateBasedPushBoxEnvB6(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB7(StateBasedPushBoxEnv):
-    """Benchmark 7 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB7(StateBasedPushXEnv):
+    """Benchmark 7 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -497,6 +512,7 @@ class StateBasedPushBoxEnvB7(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -520,6 +536,7 @@ class StateBasedPushBoxEnvB7(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -527,8 +544,8 @@ class StateBasedPushBoxEnvB7(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB8(StateBasedPushBoxEnv):
-    """Benchmark 8 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB8(StateBasedPushXEnv):
+    """Benchmark 8 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -547,6 +564,7 @@ class StateBasedPushBoxEnvB8(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -570,6 +588,7 @@ class StateBasedPushBoxEnvB8(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,
@@ -577,8 +596,8 @@ class StateBasedPushBoxEnvB8(StateBasedPushBoxEnv):
         )
 
 
-class StateBasedPushBoxEnvB9(StateBasedPushBoxEnv):
-    """Benchmark 9 for the :class:`StateBasedPushBoxEnv` task."""
+class StateBasedPushXEnvB9(StateBasedPushXEnv):
+    """Benchmark 9 for the :class:`StateBasedPushXEnv` task."""
 
     def __init__(
         self,
@@ -597,6 +616,7 @@ class StateBasedPushBoxEnvB9(StateBasedPushBoxEnv):
         learn_jerk: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
+        min_coverage: float = 0.95,
         collision_penalty: float = -10,
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
@@ -620,6 +640,7 @@ class StateBasedPushBoxEnvB9(StateBasedPushBoxEnv):
             learn_jerk,
             early_termination_steps,
             max_position_err,
+            min_coverage,
             collision_penalty,
             per_step_penalty,
             object_at_goal_reward,

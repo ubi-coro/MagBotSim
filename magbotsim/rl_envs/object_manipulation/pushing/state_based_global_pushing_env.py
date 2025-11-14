@@ -14,7 +14,7 @@ import shapely.geometry as sg
 from gymnasium import logger
 
 from magbotsim import BasicMagBotSingleAgentEnv, MoverImpedanceController
-from magbotsim.utils import mujoco_utils, benchmark_utils
+from magbotsim.utils import benchmark_utils, mujoco_utils
 
 DEFAULT_OBJECT_TYPES = [
     'square_box',
@@ -179,13 +179,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         self._sample_object_params(options={})
 
-        # cam config
-        default_cam_config = {
-            'distance': 0.8,
-            'azimuth': 160.0,
-            'elevation': -55.0,
-            'lookat': np.array([0.8, 0.2, 0.4]),
-        }
+        self.continuous_layout = np.all(layout_tiles == 1)
 
         super().__init__(
             layout_tiles=layout_tiles,
@@ -195,7 +189,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             initial_mover_zpos=initial_mover_zpos,
             std_noise=std_noise,
             render_mode=render_mode,
-            default_cam_config=default_cam_config,
+            default_cam_config=self._compute_default_cam_config(layout_tiles),
             render_every_cycle=render_every_cycle,
             num_cycles=num_cycles,
             collision_params=collision_params,
@@ -286,6 +280,29 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.time_to_success_s = -1
         self.num_elapsed_cycles = 0
         self.success_counter = 0
+
+    def _compute_default_cam_config(
+        self,
+        layout_tiles: np.ndarray,
+        tile_params: dict[str, Any] | None = None,
+        factor: float = 1.1,
+    ) -> dict[str, Any]:
+        if tile_params and 'size' in tile_params:
+            tile_size = tile_params['size'][:2]
+        else:
+            tile_size = np.array([0.12, 0.12])
+
+        x, y = layout_tiles.shape * tile_size
+
+        diag = np.sqrt(x**2 + y**2)
+        distance = (diag * factor) / np.cos(np.radians(-65.0))
+
+        return {
+            'distance': distance,
+            'azimuth': 90.0,
+            'elevation': -65.0,
+            'lookat': np.array([x, y, 0.067]),
+        }
 
     def update_cached_actuator_mujoco_data(self) -> None:
         """Update all cached information about MuJoCo actuators, such as names and ids."""
@@ -557,6 +574,28 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         for prop in ['width', 'height', 'depth', 'radius', 'segment_width', 'mass']:
             setattr(self, f'object_{prop}', options.get(f'object_{prop}', self.np_random.uniform(*self.object_ranges[prop])))
 
+    def _sample_position_on_tile(self) -> np.ndarray:
+        """Sample a random position within a random valid tile, constrained to not extend beyond tile edges.
+
+        :return: the random position on a tile.
+        """
+        valid_tiles = np.argwhere(self.layout_tiles == 1)
+        tile = valid_tiles[self.np_random.choice(len(valid_tiles))]
+        tx, ty = tile[0], tile[1]
+
+        center_x = self.x_pos_tiles[tx, ty]
+        center_y = self.y_pos_tiles[tx, ty]
+
+        has_left = ty > 0 and self.layout_tiles[tx, ty - 1] == 1
+        has_right = ty < self.layout_tiles.shape[1] - 1 and self.layout_tiles[tx, ty + 1] == 1
+        has_up = tx > 0 and self.layout_tiles[tx - 1, ty] == 1
+        has_down = tx < self.layout_tiles.shape[0] - 1 and self.layout_tiles[tx + 1, ty] == 1
+
+        x_offset = self.np_random.uniform(-self.tile_size[0] if has_up else 0, self.tile_size[0] if has_down else 0)
+        y_offset = self.np_random.uniform(-self.tile_size[1] if has_left else 0, self.tile_size[1] if has_right else 0)
+
+        return np.array([center_x + x_offset, center_y + y_offset])
+
     def _reset_callback(self, options: dict[str, Any] | None = None) -> None:
         """Reset the start positions of the movers and object and the object goal position and reload the model. It is ensured that the
         new start positions of the movers are collision-free, i.e. no wall collision, no collision with other movers and no collision
@@ -572,10 +611,11 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         start_qpos[:, 2] = self.initial_mover_zpos
         start_qpos[:, 3] = 1  # Quaternion (1,0,0,0)
 
-        self.object_xy_goal_pos = options.get(
-            'object_xy_goal_pos',
-            self.np_random.uniform(low=self.object_goal_min_xy_pos, high=self.object_goal_max_xy_pos, size=(2,)),
-        )
+        if self.continuous_layout:
+            self.object_xy_goal_pos = options.get(
+                'object_xy_goal_pos',
+                self.np_random.uniform(low=self.object_goal_min_xy_pos, high=self.object_goal_max_xy_pos, size=(2,)),
+            )
 
         self._sample_object_params(options)
 
@@ -607,7 +647,12 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                     mover_names=self.mover_names, c_size=self.c_size, add_safety_offset=True, mover_qpos=start_qpos
                 )
 
-                self.object_xy_start_pos = self.np_random.uniform(low=self.object_min_xy_pos, high=self.object_max_xy_pos, size=(2,))
+                if not self.continuous_layout:
+                    self.object_xy_start_pos = self._sample_position_on_tile()
+                    self.object_xy_goal_pos = options.get('object_xy_goal_pos', self._sample_position_on_tile())
+                else:
+                    self.object_xy_start_pos = self.np_random.uniform(low=self.object_min_xy_pos, high=self.object_max_xy_pos, size=(2,))
+
                 mover_object_dist_ok = (
                     np.linalg.norm(self.object_xy_start_pos - start_qpos[:, :2], ord=2, axis=1) > self.min_mover_object_dist
                 )
