@@ -13,7 +13,7 @@ from magbotsim.rl_envs.object_manipulation.pushing.state_based_global_pushing_en
 from magbotsim.utils.benchmark_utils import BENCHMARK_PUSHING_LAYOUTS, BENCHMARK_PUSHING_NUM_MOVERS
 
 
-class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
+class StateBasedPushLEnv(StateBasedGlobalPushingEnv):
     """An environment for pushing an X shaped object, similar to :class:`StateBasedPushTEnv`.
 
     :param num_movers: the number of movers in the environment, defaults to 1
@@ -109,7 +109,7 @@ class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
             render_every_cycle=render_every_cycle,
             num_cycles=num_cycles,
             collision_params=collision_params,
-            object_type='plus_shape',
+            object_type='l_shape',
             object_ranges=DEFAULT_OBJECT_RANGES,
             v_max=v_max,
             a_max=a_max,
@@ -128,8 +128,8 @@ class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
         )
 
 
-class StateBasedPushXEnvB0(StateBasedPushXEnv):
-    """Benchmark 0 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB0(StateBasedPushLEnv):
+    """Benchmark 0 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -180,8 +180,8 @@ class StateBasedPushXEnvB0(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB1(StateBasedPushXEnv):
-    """Benchmark 1 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB1(StateBasedPushLEnv):
+    """Benchmark 1 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -232,8 +232,8 @@ class StateBasedPushXEnvB1(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB2(StateBasedPushXEnv):
-    """Benchmark 2 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB2(StateBasedPushLEnv):
+    """Benchmark 2 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -284,8 +284,8 @@ class StateBasedPushXEnvB2(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB3(StateBasedPushXEnv):
-    """Benchmark 3 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB3(StateBasedPushLEnv):
+    """Benchmark 3 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -336,8 +336,8 @@ class StateBasedPushXEnvB3(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB4(StateBasedPushXEnv):
-    """Benchmark 4 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB4(StateBasedPushLEnv):
+    """Benchmark 4 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -388,8 +388,8 @@ class StateBasedPushXEnvB4(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB5(StateBasedPushXEnv):
-    """Benchmark 5 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB5(StateBasedPushLEnv):
+    """Benchmark 5 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -440,8 +440,8 @@ class StateBasedPushXEnvB5(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB6(StateBasedPushXEnv):
-    """Benchmark 6 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB6(StateBasedPushLEnv):
+    """Benchmark 6 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -492,8 +492,8 @@ class StateBasedPushXEnvB6(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB7(StateBasedPushXEnv):
-    """Benchmark 7 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB7(StateBasedPushLEnv):
+    """Benchmark 7 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -544,8 +544,8 @@ class StateBasedPushXEnvB7(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB8(StateBasedPushXEnv):
-    """Benchmark 8 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB8(StateBasedPushLEnv):
+    """Benchmark 8 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
@@ -596,8 +596,8 @@ class StateBasedPushXEnvB8(StateBasedPushXEnv):
         )
 
 
-class StateBasedPushXEnvB9(StateBasedPushXEnv):
-    """Benchmark 9 for the :class:`StateBasedPushXEnv` task."""
+class StateBasedPushLEnvB9(StateBasedPushLEnv):
+    """Benchmark 9 for the :class:`StateBasedPushLEnv` task."""
 
     def __init__(
         self,
