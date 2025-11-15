@@ -38,7 +38,8 @@ Collisions            Mean number of collisions for the total number of goals :m
                       Of these:
                       
                       - **Mover-Mover Collisions**: Mean number of mover-mover collisions if more than one mover is used.
-                      - **Mover-Obstacle Collisions**: Mean number of collisions between a mover and any static obstacle.        
+                      - **Mover-Obstacle Collisions**: Mean number of collisions between a mover and any static obstacle.
+===================== ================================================================================================================  
 
 We have created 10 benchmark environments (B0-B9) for pushing tasks, each with a defined
 number of movers and tile configurations.
