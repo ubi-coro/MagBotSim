@@ -18,7 +18,7 @@ The aim is to push the object with the mover to the desired goal position withou
 acceleration of the mover. A collision is detected, if the mover leaves the tiles (think of this as a collision with a wall) or if the
 mover or the object collide with one of the obstacles.
 
-.. image:: ../images/img_state_based_pusing_env_with_static_obstacles.png
+.. image:: ../_static/envs/img_state_based_pusing_env_with_static_obstacles.png
    :width: 40%
    :align: center
 
@@ -27,17 +27,17 @@ The size of the obstacles can be changed by setting the ``obstacle_mode``. The f
 
 - **simple**:
 
-.. image:: ../images/img_state_based_static_obstacle_pushing_env_simple.png
+.. image:: ../_static/envs/img_state_based_static_obstacle_pushing_env_simple.png
     :width: 20%
 
 - **medium**:
     
-.. image:: ../images/img_state_based_static_obstacle_pushing_env_medium.png
+.. image:: ../_static/envs/img_state_based_static_obstacle_pushing_env_medium.png
     :width: 20%
 
 - **hard**:
 
-.. image:: ../images/img_state_based_static_obstacle_pushing_env_hard.png
+.. image:: ../_static/envs/img_state_based_static_obstacle_pushing_env_hard.png
     :width: 20%
 
 - **random**:

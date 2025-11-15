@@ -246,7 +246,7 @@ tutorial :ref:`creating_env`.
 
 You should now see the environment with the four movers, the Panda robot, and the box:
 
-.. image:: ../images/img_panda_box_example_add_robot_box.png
+.. image:: ../_static/examples_tutorials/img_panda_box_example_add_robot_box.png
     :width: 80%
     :align: center
 
@@ -395,7 +395,7 @@ Additionally, add the following code at the end of ``PandaBoxExampleEnv.init()``
 
 If you again render the ``PandaBoxExampleEnv``, you should now see this:
 
-.. image:: ../images/img_panda_box_example_add_actuators.png
+.. image:: ../_static/examples_tutorials/img_panda_box_example_add_actuators.png
     :width: 80%
     :align: center
 

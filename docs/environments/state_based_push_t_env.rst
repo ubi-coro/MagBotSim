@@ -5,7 +5,7 @@ State-Based Push-T Environment
 
 The ``StateBasedPushTEnv`` is an object pushing environment with a T-shaped object:
 
-.. image:: ../images/img_push_t_env_1_mover.png
+.. image:: ../_static/envs/img_push_t_env_1_mover.png
     :width: 40%
     :align: center
 

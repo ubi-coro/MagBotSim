@@ -122,7 +122,7 @@ to your directory where ``panda_box_env.py`` is located, write the following cod
 
 You should now see MuJoCo's passive viewer and the following environment with four movers:
 
-.. image:: ../images/img_panda_box_example_init.png
+.. image:: ../_static/examples_tutorials/img_panda_box_example_init.png
     :width: 80%
     :align: center
 

@@ -134,7 +134,7 @@ The environment supports six different object shapes:
 - **l_shape**: L-shaped object with vertical and horizontal segments
 - **plus_shape**: Plus/X-shaped object with perpendicular segments
 
-.. figure:: ../images/img_objects_isometric.png
+.. figure:: ../_static/envs/img_objects_isometric.png
    :align: center
    :width: 40%
 
@@ -155,7 +155,7 @@ The following object parameters can be configured:
 - **d**: Depth parameter for segment positioning in composite shapes in m (default: (0.05, 0.05))
 - **mass**: Mass of the object in kg (default: (0.3, 0.3))
 
-.. figure:: ../images/img_object_geometry_labeled.png
+.. figure:: ../_static/envs/img_object_geometry_labeled.png
    :align: center
    :width: 40%
 

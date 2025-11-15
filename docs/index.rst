@@ -1,7 +1,7 @@
 MagBotSim Documentation
 =======================
 
-.. image:: images/visual_abstract.png
+.. image:: _static/visual_abstract.png
    :width: 85%
    :align: center
 
