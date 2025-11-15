@@ -46,7 +46,7 @@ Training Parameters:
     - seed: 0
 
 Evaluation Parameters:
-  - env_eval_seed: 42 # (+1 for each new episode)
+  - env_eval_seed: 4242 # (+1 for each new episode)
   - deterministic: True
   - max_position_err: 0.05
 
