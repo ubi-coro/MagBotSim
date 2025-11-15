@@ -16,7 +16,7 @@ from magbotsim import (
     MoverImpedanceController,
 )
 from magbotsim.utils import mujoco_utils
-from magbotsim.utils.benchmark_utils import EnergyEfficiencyMeasurement
+from magbotsim.utils.benchmark_utils import BENCHMARK_PLANNING_LAYOUTS, BENCHMARK_PLANNING_NUM_MOVERS, EnergyEfficiencyMeasurement
 
 
 class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
@@ -117,14 +117,6 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         # impedance controllers
         self.impedance_controllers = None
 
-        # cam config
-        default_cam_config = {
-            'distance': 1.1,
-            'azimuth': 90.0,
-            'elevation': -65.0,
-            'lookat': np.array([0.44, 0.18, 0.067]),
-        }
-
         super().__init__(
             layout_tiles=layout_tiles,
             num_movers=num_movers,
@@ -133,7 +125,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
             initial_mover_zpos=initial_mover_zpos,
             std_noise=std_noise,
             render_mode=render_mode,
-            default_cam_config=default_cam_config,
+            default_cam_config=self._compute_default_cam_config(layout_tiles, tile_params),
             render_every_cycle=render_every_cycle,
             num_cycles=num_cycles,
             collision_params=collision_params,
@@ -259,6 +251,29 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
                 num_movers=self.num_movers,
                 dt=self.cycle_time,
             )
+
+    def _compute_default_cam_config(
+        self,
+        layout_tiles: np.ndarray,
+        tile_params: dict[str, Any] | None = None,
+        factor: float = 1.1,
+    ) -> dict[str, Any]:
+        if tile_params and 'size' in tile_params:
+            tile_size = tile_params['size'][:2]
+        else:
+            tile_size = np.array([0.12, 0.12])
+
+        x, y = layout_tiles.shape * tile_size
+
+        diag = np.sqrt(x**2 + y**2)
+        distance = (diag * factor) / np.cos(np.radians(-65.0))
+
+        return {
+            'distance': distance,
+            'azimuth': 90.0,
+            'elevation': -65.0,
+            'lookat': np.array([x, y, 0.067]),
+        }
 
     def update_cached_actuator_mujoco_data(self) -> None:
         """Update all cached information about MuJoCo actuators, such as names and ids."""
@@ -819,3 +834,463 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
             wall_collisions = np.array([info['wall_collision']])
 
         return batch_size, mover_collisions, wall_collisions
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB0(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[0],
+            BENCHMARK_PLANNING_NUM_MOVERS[0],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB1(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[1],
+            BENCHMARK_PLANNING_NUM_MOVERS[1],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB2(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[2],
+            BENCHMARK_PLANNING_NUM_MOVERS[2],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB3(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[3],
+            BENCHMARK_PLANNING_NUM_MOVERS[3],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB4(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[4],
+            BENCHMARK_PLANNING_NUM_MOVERS[4],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB5(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[5],
+            BENCHMARK_PLANNING_NUM_MOVERS[5],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB6(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[6],
+            BENCHMARK_PLANNING_NUM_MOVERS[6],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB7(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[7],
+            BENCHMARK_PLANNING_NUM_MOVERS[7],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB8(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[8],
+            BENCHMARK_PLANNING_NUM_MOVERS[8],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
+
+
+class LongHorizonGlobalTrajectoryPlanningEnvB9(LongHorizonGlobalTrajectoryPlanningEnv):
+    def __init__(
+        self,
+        show_2D_plot: bool,
+        mover_colors_2D_plot: list[str] | None = None,
+        tile_params: dict[str, Any] | None = None,
+        mover_params: dict[str, Any] | None = None,
+        initial_mover_zpos: float = 0.003,
+        std_noise: np.ndarray | float = 0.00001,
+        render_mode: str | None = 'human',
+        render_every_cycle: bool = False,
+        num_cycles: int = 40,
+        collision_params: dict[str, Any] | None = None,
+        v_max: float = 2,
+        a_max: float = 10,
+        j_max: float = 100,
+        learn_jerk: bool = False,
+        threshold_pos: float = 0.1,
+        use_mj_passive_viewer: bool = False,
+        timeout_steps: int | None = 50,
+        enable_energy_tracking: bool = False,
+    ) -> None:
+        super().__init__(
+            BENCHMARK_PLANNING_LAYOUTS[9],
+            BENCHMARK_PLANNING_NUM_MOVERS[9],
+            show_2D_plot,
+            mover_colors_2D_plot,
+            tile_params,
+            mover_params,
+            initial_mover_zpos,
+            std_noise,
+            render_mode,
+            render_every_cycle,
+            num_cycles,
+            collision_params,
+            v_max,
+            a_max,
+            j_max,
+            learn_jerk,
+            threshold_pos,
+            use_mj_passive_viewer,
+            timeout_steps,
+            enable_energy_tracking,
+        )
