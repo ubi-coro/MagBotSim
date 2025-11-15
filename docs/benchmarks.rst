@@ -5,7 +5,8 @@ In order to make future research results comparable, we propose several task-spe
 allow users to measure the performance of suggested motion planning algorithms for object manipulation 
 and trajectory planning in the context of magnetic levitation systems. To simplify measurements for users, 
 MagBotSim includes auxiliary functions (see :ref:`benchmark_utils`) to measure specific properties, e.g. 
-corrective movements.
+corrective movements. In the following, :math:`n_1, n_2, n_3, n_4\in\mathbb{N}` denote the total number 
+of goals or the number of successfully reached goals used in the measurements.
 
 .. note::
     Since MagBotSim currently contains examples for object pushing and trajectory planning, the following 
@@ -25,20 +26,21 @@ to as *overshoot corrections*. If the distance between the object and goal incre
 step and decreases later within the episode, this correction is considered as the second type of corrective 
 movement, i.e. a *distance correction*. Our latest results can be found here: :ref:`results_object_pushing`.
 
-===================== ==============================================================================================================================
+===================== ================================================================================================================
 Metric                Measurement                                                                                
-===================== ==============================================================================================================================
-Success Rate          Number of successfully reached goals out of a total of :math:`1000` goals.                 
-Throughput            Mean number of milliseconds until the object has reached its goal for the first time out of a total of :math:`1000` goals.
-Overshoot Corrections Mean number of overshoot corrections out of a total of :math:`1000` goals. 
+===================== ================================================================================================================
+Success Rate          Number of successfully reached goals divided by the total number of goals :math:`n_1`.                 
+Throughput            Number of successfully reached goals :math:`n_2` divided by the time required to reach these goals.
+Overshoot Corrections Mean number of overshoot corrections for successfully reached goals :math:`n_2`.
                       Can be measured using :ref:`benchmark_utils_corrective_movements`.
-Distance Corrections  Mean number of distance corrections out of a total of :math:`1000` goals.
+Distance Corrections  Mean number of distance corrections for successfully reached goals :math:`n_2`.
                       Can be measured using :ref:`benchmark_utils_corrective_movements`.
-Collisions            Mean number of collisions out of a total of :math:`1000` goals (including any obstacle - object collisions). Of these:
+Collisions            Mean number of collisions for the total number of goals :math:`n_1` (including any obstacle - object collisions). 
+                      Of these:
                       
                       - **Mover-Mover Collisions**: Mean number of mover-mover collisions if more than one mover is used.
                       - **Mover-Obstacle Collisions**: Mean number of collisions between a mover and any static obstacle.        
-===================== ==============================================================================================================================
+===================== ================================================================================================================
 
 Benchmarks Trajectory Planning
 ------------------------------
@@ -47,20 +49,20 @@ to reach varying goals without leaving tiles or colliding with static or dynamic
 object pushing task, a mover-specific goal can either be a position or a pose (position and orientation).
 :math:`n\in\mathbb{N}` denotes the number of movers. Our latest results can be found here: :ref:`results_trajectory_planning`.
 
-===================== ==============================================================================================================================
+===================== ==============================================================================================================================================
 Metric                Measurement                                                                              
-===================== ==============================================================================================================================
-Success Rate          Number of successfully reached goals out of a total of :math:`5000n` goals.                 
-Makespan              Number of milliseconds required by the slowest mover to reach :math:`1000` goals.
-Throughput            Number of milliseconds required by all movers to reach :math:`1000n` goals.
-Collisions            Number of collisions out of a total of :math:`5000n` goals. Of these:
+===================== ==============================================================================================================================================
+Success Rate          Number of successfully reached goals divided by the total number of goals :math:`n_1`.                 
+Makespan              Number of milliseconds required by the slowest mover to reach the total number of goals :math:`n_2`.
+Throughput            Number of milliseconds required by all movers to reach the total number of goals :math:`n_3`.
+Collisions            Number of collisions for the total number of goals :math:`n_1`. Of these:
                       
                       - **Mover-Mover Collisions**: Number of mover-mover collisions if more than one mover is used.
                       - **Mover-Obstacle Collisions**: Number of collisions between a mover and any static obstacle.
-Smoothness            Minimum, maximum, and mean weighted sum of jerk, acceleration, and velocity of all movers within :math:`1000` milliseconds.
+Smoothness            Minimum, maximum, and mean weighted sum of jerk, acceleration, and velocity of all movers within the total time period :math:`t\in\mathbb{N}`.
                       Can be measured :ref:`benchmark_utils_energy_efficiency_measurement`.
-Process Time          Process time required by all movers to reach :math:`100n` goals.
-===================== ==============================================================================================================================
+Process Time          Process time required by all movers to successfully reach the total number of goals :math:`n_4`.
+===================== ==============================================================================================================================================
 
 Latest Results
 ==============
