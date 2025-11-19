@@ -37,6 +37,8 @@ described in the `documentation <https://stable-baselines3.readthedocs.io/en/mas
     from stable_baselines3 import SAC, HerReplayBuffer
     import magbotsim
 
+    gym.register_envs(magbotsim)
+
     render_mode = None
     mover_params = {'size': np.array([0.155 / 2, 0.155 / 2, 0.012 / 2]), 'mass': 1.24}
     collision_params = {'shape': 'box', 'size': np.array([0.155 / 2 + 1e-6, 0.155 / 2 + 1e-6]), 'offset': 0.0, 'offset_wall': 0.0}
