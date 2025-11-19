@@ -53,7 +53,7 @@ Metric, Algorithm, Parameters   :math:`n_1,n_2` Push with Obstacles
 Number of Movers                ---             1
 Number of Measurements          ---             100
 Success Rate (%)                :math:`200`     :math:`91.26\pm1.92`
-Throughput (s)                  :math:`100`     :math:`0.9665\pm0.0322`
+Throughput (goals/s)            :math:`100`     :math:`0.9665\pm0.0322`
 Overshoot Corrections           :math:`100`     :math:`0.0036\pm0.0061`
 Distance Corrections            :math:`100`     :math:`0.1346\pm0.0394`
 Collisions                      :math:`200`     :math:`0.0451\pm0.0129`

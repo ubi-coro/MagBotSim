@@ -1,6 +1,6 @@
 # MagBotSim (Magnetic Robotics Simulation)
 
-<img src="https://github.com/ubi-coro/MagBotSim/raw/main/docs/images/visual_abstract.png" />
+<img src="https://github.com/ubi-coro/MagBotSim/raw/main/docs/_static/visual_abstract.png" />
 
 MagBotSim is a library for physics-based simulation environments for motion planning 
 and object manipulation in the field of Magnetic Robotics. The main component of every environment is a 

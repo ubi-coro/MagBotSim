@@ -12,6 +12,7 @@ State-Based Pushing Environment with Static Obstacles
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen></iframe>
     </div>
+    <br>
 
 The ``StateBasedStaticObstaclePushingEnv`` is a simple pushing environment with two static obstacles.
 The aim is to push the object with the mover to the desired goal position without collisions by specifying either the jerk or the 

@@ -109,7 +109,7 @@ Collisions            Number of collisions for the total number of goals :math:`
 
                       - **Mover-Mover Collisions**: Number of mover-mover collisions if more than one mover is used.
                       - **Mover-Obstacle Collisions**: Number of collisions between a mover and any static obstacle.
-Smoothness            Minimum, maximum, and mean weighted sum of jerk, acceleration, and velocity of all movers within the total time period :math:`t\in\mathbb{N}`.
+Smoothness            Mean weighted sum of jerk, acceleration, and velocity of all movers within the total time period :math:`t\in\mathbb{N}`.
                       Can be measured :ref:`benchmark_utils_energy_efficiency_measurement`.
 Process Time          Process time required by all movers to successfully reach the total number of goals :math:`n_4`.
 ===================== ==============================================================================================================================================
