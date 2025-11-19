@@ -17,6 +17,8 @@ A detailed documentation of all environments can be found in the following subse
 
    environments/state_based_global_pushing_env
    environments/state_based_push_t_env
+   environments/state_based_push_x_env
+   environments/state_based_push_l_env
    environments/state_based_push_box_env
    environments/state_based_static_obstacle_pushing_env
 
