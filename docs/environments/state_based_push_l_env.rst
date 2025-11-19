@@ -5,7 +5,7 @@ State-Based Push-L Environment
 
 The ``StateBasedPushLEnv`` is an object pushing environment with an L-shaped object:
 
-.. image:: ../images/img_push_l_env_1_mover.png
+.. image:: ../_static/envs/img_push_l_env_1_mover.png
     :width: 40%
     :align: center
 

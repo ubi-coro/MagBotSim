@@ -5,7 +5,7 @@ State-Based Push-X Environment
 
 The ``StateBasedPushXEnv`` is an object pushing environment with an X-shaped object:
 
-.. image:: ../images/img_push_x_env_1_mover.png
+.. image:: ../_static/envs/img_push_x_env_1_mover.png
     :width: 40%
     :align: center
 
