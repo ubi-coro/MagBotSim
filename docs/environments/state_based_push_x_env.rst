@@ -1,20 +1,23 @@
-.. _state_based_push_box_env:
+.. _state_based_push_x_env:
 
-State-Based Push-Box Environment
-================================
+State-Based Push-X Environment
+==============================
 
-The ``StateBasedPushBoxEnv`` is an object pushing environment with a T-shaped object:
+The ``StateBasedPushXEnv`` is an object pushing environment with an X-shaped object:
 
-.. image:: ../_static/envs/img_push_box_env_1_mover.png
+.. image:: ../_static/envs/img_push_x_env_1_mover.png
     :width: 40%
     :align: center
 
-This environment is a preconfigured version of :ref:`state_based_global_pushing_env` specifically designed for the box pushing task, 
-similar to the ``FetchPush``-Environment contained in the `Gymnasium-Robotics <https://robotics.farama.org/envs/fetch/push/>`_ library 
-and introduced in `Multi-Goal Reinforcement Learning: Challenging Robotics Environments and Request for Research <https://doi.org/10.48550/arXiv.1802.09464>`_. 
-However, in this environment, the number of movers used for pushing can be configured, making it possible to control multiple movers. 
-Please refer to the :ref:`state_based_global_pushing_env` for additional information about the observation space, action space, immediate rewards, 
-episode termination/truncation, and environment reset.
+The Push-X task is a manipulation benchmark where the goal is to push an X-shaped object to a target
+pose (position and orientation). Similar to the Push-T task, this challenge requires precise control to achieve
+both translational and rotational alignment of the asymmetric object. The X-shape presents unique symmetry properties
+compared to the T-shape and L-shape, with its four-fold rotational symmetry making orientation alignment particularly
+interesting.
+
+This environment is a preconfigured version of :ref:`state_based_global_pushing_env` specifically designed for the
+Push-X manipulation task. Please refer to the :ref:`state_based_global_pushing_env` for additional information about
+the observation space, action space, immediate rewards, episode termination/truncation, and environment reset.
 
 Basic Usage
 -----------
@@ -37,11 +40,11 @@ described in the `documentation <https://stable-baselines3.readthedocs.io/en/mas
     gym.register_envs(magbotsim)
 
     render_mode = None
-    mover_params = {'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': 0.628}
-    collision_params = {'shape': 'box', 'size': np.array([0.113 / 2 + 1e-6, 0.113 / 2 + 1e-6]), 'offset': 0.0, 'offset_wall': 0.0}
+    mover_params = {'size': np.array([0.155 / 2, 0.155 / 2, 0.012 / 2]), 'mass': 1.24}
+    collision_params = {'shape': 'box', 'size': np.array([0.155 / 2 + 1e-6, 0.155 / 2 + 1e-6]), 'offset': 0.0, 'offset_wall': 0.0}
     env_params = {'mover_params': mover_params, 'collision_params': collision_params, 'render_mode': render_mode}
 
-    env = gym.make('StateBasedPushBoxEnv-v0', **env_params)
+    env = gym.make('StateBasedPushXEnv-v0', **env_params)
     # copy_info_dict=True, as information about collisions is stored in the info dictionary to avoid
     # computationally expensive collision checking calculations when the data is relabeled (HER)
     model = SAC(
@@ -59,7 +62,7 @@ Version History
 
 Parameters
 ----------
-.. automodule:: magbotsim.rl_envs.object_manipulation.pushing.state_based_push_box_env
+.. automodule:: magbotsim.rl_envs.object_manipulation.pushing.state_based_push_x_env
   :members:
   :no-index:
   :show-inheritance:

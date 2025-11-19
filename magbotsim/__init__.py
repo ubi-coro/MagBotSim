@@ -63,31 +63,24 @@ def register_gymnasium_envs():
             entry_point=f'magbotsim.rl_envs.object_manipulation.pushing.state_based_push_box_env:StateBasedPushBoxEnvB{i}',
         )
 
-    register(
-        id='StateBasedPushTEnv-v0',
-        entry_point='magbotsim.rl_envs.object_manipulation.pushing.state_based_push_t_env:StateBasedPushTEnv',
-        max_episode_steps=50,
-    )
+    # Letter-Pushing Envs
+    for letter in ['t', 'x', 'l']:
+        env_name = f'StateBasedPush{letter.upper()}Env'
+        path = f'magbotsim.rl_envs.object_manipulation.pushing.state_based_push_{letter}_env'
 
-    # Push T Benchmarks
-    for i in range(len(BENCHMARK_PLANNING_LAYOUTS)):
+        # Base Environment
         register(
-            id=f'StateBasedPushTEnvB{i}-v0',
-            entry_point=f'magbotsim.rl_envs.object_manipulation.pushing.state_based_push_t_env:StateBasedPushTEnvB{i}',
+            id=f'{env_name}-v0',
+            entry_point=f'{path}:{env_name}',
+            max_episode_steps=50,
         )
 
-    register(
-        id='StateBasedPushXEnv-v0',
-        entry_point='magbotsim.rl_envs.object_manipulation.pushing.state_based_push_x_env:StateBasedPushXEnv',
-        max_episode_steps=50,
-    )
-
-    # Push X Benchmarks
-    for i in range(len(BENCHMARK_PLANNING_LAYOUTS)):
-        register(
-            id=f'StateBasedPushXEnvB{i}-v0',
-            entry_point=f'magbotsim.rl_envs.object_manipulation.pushing.state_based_push_x_env:StateBasedPushXEnvB{i}',
-        )
+        # Benchmark Environments
+        for i in range(len(BENCHMARK_PLANNING_LAYOUTS)):
+            register(
+                id=f'{env_name}B{i}-v0',
+                entry_point=f'{path}:{env_name}B{i}',
+            )
 
 
 register_gymnasium_envs()
