@@ -16,8 +16,7 @@ are the active component of the drive system. As shown in the Figure above, the 
 of electromagnetic fields (yellow) that interact with the mover's field (blue). During operation, the movers hover above the 
 tiles and can be controlled in six dimensions by adjusting the currents in the coils contained in the tiles. 
 
-A brief summary of our MagBotSim paper "MagBotSim: Physics-Based Simulation and Reinforcement Learning Environments for 
-Magnetic Robotics" (see :ref:`citation`) is shown in the following video:
+A brief summary of our MagBotSim paper `MagBotSim: Physics-Based Simulation and Reinforcement Learning Environments for Magnetic Robotics <https://arxiv.org/abs/2511.16158>`_ (see :ref:`citation`) is shown in the following video:
 
 .. raw:: html
 
@@ -168,8 +167,18 @@ multi-agent environments that serve as starting points for the easy development 
 
 Paper & Citation
 ^^^^^^^^^^^^^^^^
-If you use MagBotSim for your research, please cite:
+If you use MagBotSim for your research, please cite our paper `MagBotSim: Physics-Based Simulation and Reinforcement Learning Environments for Magnetic Robotics <https://arxiv.org/abs/2511.16158>`_
+as follows:
 
+.. code-block:: bibtex
+
+   @aricle{bergmann_magbotsim_2025,
+      title = {{MagBotSim}: {Physics}-{Based} {Simulation} and {Reinforcement} {Learning} {Environments} for {Magnetic} {Robotics}},
+      author = {Bergmann, Lara and Grothues, Cedric and Neumann, Klaus},
+      journal = {arXiv preprint arXiv:2511.16158},
+      year = {2025},
+      doi = {10.48550/ARXIV.2511.16158}
+   }
 
 Learn More
 ^^^^^^^^^^

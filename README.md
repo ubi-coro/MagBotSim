@@ -74,5 +74,18 @@ for _ in range(0,100):
 env.close()
 ```
 
+## Paper & Citation
+If you use MagBotSim for your research, please cite our paper (https://arxiv.org/abs/2511.16158) as follows:
+
+```
+@aricle{bergmann_magbotsim_2025,
+    title = {{MagBotSim}: {Physics}-{Based} {Simulation} and {Reinforcement} {Learning} {Environments} for {Magnetic} {Robotics}},
+    author = {Bergmann, Lara and Grothues, Cedric and Neumann, Klaus},
+    journal = {arXiv preprint arXiv:2511.16158},
+    year = {2025},
+    doi = {10.48550/ARXIV.2511.16158}
+}
+```
+
 ## Maintainer
 MagBotSim is currently maintained by Lara Bergmann (@lbergmann1).
