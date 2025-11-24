@@ -98,6 +98,9 @@ MagBotSim can also be used to develop trajectory planning policies that can be t
 
 |br|
 
+We plan to extend MagBotSim with a magnetic field model to support low-level controller development, e.g. building on this work:
+`End-to-End Low-Level Neural Control of an Industrial-Grade 6D Magnetic Levitation System <https://arxiv.org/abs/2509.01388>`_.
+
 .. _installation_license:
 
 Installation & License

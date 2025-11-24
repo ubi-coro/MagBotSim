@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Release v1.0.1 (2025-11-24)
+---------------------------
+
+General
+^^^^^^^
+1. Use MuJoCo functions in ``MoverImpedanceController`` instead of ``scipy.spatial.transform.Rotation`` (better performance, but ``scipy.spatial.transform.Rotation`` is not completely replaced)
+2. Add benchmark environments
+3. Add ``StateBasedPushXEnv-v0`` and ``StateBasedPushLEnv-v0``
+4. Update throughput calculation in pushing environments and update benchmark results accordingly
+
 Release v1.0.0 (2025-11-08)
 ---------------------------
 

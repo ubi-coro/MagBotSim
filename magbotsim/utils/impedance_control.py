@@ -133,10 +133,13 @@ class MoverImpedanceController:
         """
         assert pos_d.shape == (3,)
         assert quat_d.shape == (4,)
+        quat_d = quat_d.astype(np.float64)
 
         # desired rot mat
-        r_quat = R.from_quat(quat_d, scalar_first=True)
-        xmat_d = r_quat.as_matrix()
+        xmat_d = np.zeros((9,))
+        mujoco.mju_normalize4(quat_d)
+        mujoco.mju_quat2Mat(xmat_d, quat_d)
+        xmat_d = xmat_d.reshape((3, 3))
 
         # joint velocities
         dq = mujoco_utils.get_joint_qvel(model, data, self.mover_joint_name).reshape((-1, 1))
