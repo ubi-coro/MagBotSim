@@ -3,6 +3,7 @@ Training Parameters:
     - num_movers: 1
     - num_cycles: 80
     - learn_jeark: False
+    - use_sparse_pose_reward: False
     - train_min_coverage: 0.95
     - collision_penalty: -50.0
     - per_step_penalty: -1.0

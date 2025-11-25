@@ -83,7 +83,8 @@ The reward function is designed to encourage efficient object manipulation while
 - **Success reward**: 
 
   - if ``lean_pose=True``: ``object_at_goal_reward`` given when the object reaches its goal position without any collisions (default: +1.0)
-  - if ``lean_pose=False``: The coverage achieved in the current timestep without any collisions (``object_at_goal_reward`` is ignored)
+  - if ``lean_pose=False``: The coverage achieved in the current timestep without any collisions, if ``use_sparse_pose_reward=False`` (``object_at_goal_reward`` is ignored),
+    which is the default. Otherwise (``use_sparse_pose_reward=True``), ``object_at_goal_reward`` given when the object reaches its goal position without any collisions (default: +1.0).
 - **Collision penalty** (``collision_penalty``, default: -10.0): Applied when a collision occurs
 - **Step penalty** (``per_step_penalty``, default: -0.01): Small negative reward applied at each timestep to encourage efficiency
 

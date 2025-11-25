@@ -87,19 +87,21 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
     :param object_torsional_friction: the torsional friction coefficient of the object, defaults to 0.005
     :param v_max: the maximum velocity, defaults to 2.0 [m/s]
     :param a_max: the maximum acceleration, defaults to 10.0 [m/s²]
-    :param j_max: the maximum jerk (only used if 'learn_jerk=True'), defaults to 100.0 [m/s³]
+    :param j_max: the maximum jerk (only used if ``learn_jerk=True``), defaults to 100.0 [m/s³]
     :param learn_jerk: whether to learn the jerk, defaults to False. If set to False, the acceleration is learned, i.e. the policy
         output.
     :param learn_pose: whether to learn both position and orientation of the object, defaults to False. If set to False, only
         position is learned.
+    :param use_sparse_pose_reward: whether to use a sparse reward, if ``learn_pose=True``, defaults to False
     :param early_termination_steps: the number of consecutive steps at goal after which the episode terminates early, defaults to None
         (no early termination)
     :param max_position_err: the position threshold used to determine whether the object has reached its goal position, defaults
         to 0.05 [m]
-    :param min_coverage: the minimum coverage ratio for goal achievement when learn_pose=True, defaults to 0.9
+    :param min_coverage: the minimum coverage ratio for goal achievement when ``learn_pose=True``, defaults to 0.9
     :param collision_penalty: the reward penalty applied when a collision occurs, defaults to -10.0
     :param per_step_penalty: the small negative reward applied at each time step to encourage efficiency, defaults to -0.01
-    :param object_at_goal_reward: the positive reward given when the object reaches the goal without collisions, defaults to 1.0
+    :param object_at_goal_reward: the positive reward given when the object reaches the goal without collisions, defaults to 1.0 (not used
+        if ``learn_pose=True`` and ``use_sparse_pose_reward=False``)
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
     """
@@ -124,6 +126,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         object_torsional_friction: float = 0.005,
         learn_jerk: bool = False,
         learn_pose: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.9,
@@ -150,6 +153,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.per_step_penalty = per_step_penalty
         self.object_at_goal_reward = object_at_goal_reward
         self.steps_at_goal = 0
+        self.use_sparse_pose_reward = use_sparse_pose_reward
 
         # object parameters
         self.object_xy_start_pos = np.array([0.12, 0.36])
@@ -931,7 +935,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         reward = self.per_step_penalty * np.ones(shape=goal_reached.shape)
         reward[has_collision] = self.collision_penalty
-        if not self.learn_pose:
+        if self.use_sparse_pose_reward or not self.learn_pose:
             reward[np.logical_and(goal_reached, np.logical_not(has_collision))] = self.object_at_goal_reward
         else:
             coverage_largerzero = np.logical_and(dist_or_coverage > 0, np.logical_not(has_collision))

@@ -117,6 +117,7 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
             object_torsional_friction=object_torsional_friction,
             learn_jerk=learn_jerk,
             learn_pose=False,
+            use_sparse_pose_reward=False,  # not used, because learn_pose=False
             early_termination_steps=early_termination_steps,
             max_position_err=max_position_err,
             min_coverage=0.0,

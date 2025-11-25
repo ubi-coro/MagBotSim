@@ -58,15 +58,16 @@ class StateBasedPushTEnv(StateBasedGlobalPushingEnv):
             without an adjacent tile, closer to the center of the tile.
     :param v_max: the maximum velocity, defaults to 2.0 [m/s]
     :param a_max: the maximum acceleration, defaults to 10.0 [m/s²]
-    :param j_max: the maximum jerk (only used if 'learn_jerk=True'), defaults to 100.0 [m/s³]
+    :param j_max: the maximum jerk (only used if ``learn_jerk=True``), defaults to 100.0 [m/s³]
     :param object_sliding_friction: the sliding friction coefficient of the object, defaults to 0.6
     :param object_torsional_friction: the torsional friction coefficient of the object, defaults to 0.0001
     :param learn_jerk: whether to learn the jerk, defaults to False. If set to False, the acceleration is learned, i.e. the policy
         output.
+    :param use_sparse_pose_reward: whether to use a sparse reward, defaults to False
     :param early_termination_steps: the number of consecutive steps at goal after which the episode terminates early, defaults to None
         (no early termination)
     :param max_position_err: the position threshold used to measure corrective movements, defaults to 0.05 [m]
-    :param min_coverage: the minimum coverage ratio for goal achievement when learn_pose=True, defaults to 0.95
+    :param min_coverage: the minimum coverage ratio for goal achievement when ``learn_pose=True``, defaults to 0.95
     :param collision_penalty: the reward penalty applied when a collision occurs, defaults to -10.0
     :param per_step_penalty: the small negative reward applied at each time step to encourage efficiency, defaults to -0.01
     :param object_at_goal_reward: the positive reward given when the object reaches the goal without collisions, defaults to 1.0
@@ -91,6 +92,7 @@ class StateBasedPushTEnv(StateBasedGlobalPushingEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -118,6 +120,7 @@ class StateBasedPushTEnv(StateBasedGlobalPushingEnv):
             object_torsional_friction=object_torsional_friction,
             learn_jerk=learn_jerk,
             learn_pose=True,
+            use_sparse_pose_reward=use_sparse_pose_reward,
             early_termination_steps=early_termination_steps,
             max_position_err=max_position_err,  # only used to measure corrective movements
             min_coverage=min_coverage,
@@ -146,6 +149,7 @@ class StateBasedPushTEnvB0(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -170,6 +174,7 @@ class StateBasedPushTEnvB0(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -198,6 +203,7 @@ class StateBasedPushTEnvB1(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -222,6 +228,7 @@ class StateBasedPushTEnvB1(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -250,6 +257,7 @@ class StateBasedPushTEnvB2(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -274,6 +282,7 @@ class StateBasedPushTEnvB2(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -302,6 +311,7 @@ class StateBasedPushTEnvB3(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -326,6 +336,7 @@ class StateBasedPushTEnvB3(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -354,6 +365,7 @@ class StateBasedPushTEnvB4(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -378,6 +390,7 @@ class StateBasedPushTEnvB4(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -406,6 +419,7 @@ class StateBasedPushTEnvB5(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -430,6 +444,7 @@ class StateBasedPushTEnvB5(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -458,6 +473,7 @@ class StateBasedPushTEnvB6(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -482,6 +498,7 @@ class StateBasedPushTEnvB6(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -510,6 +527,7 @@ class StateBasedPushTEnvB7(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -534,6 +552,7 @@ class StateBasedPushTEnvB7(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -562,6 +581,7 @@ class StateBasedPushTEnvB8(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -586,6 +606,7 @@ class StateBasedPushTEnvB8(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
@@ -614,6 +635,7 @@ class StateBasedPushTEnvB9(StateBasedPushTEnv):
         object_sliding_friction: float = 0.6,
         object_torsional_friction: float = 0.0001,
         learn_jerk: bool = False,
+        use_sparse_pose_reward: bool = False,
         early_termination_steps: int | None = None,
         max_position_err: float = 0.05,
         min_coverage: float = 0.95,
@@ -638,6 +660,7 @@ class StateBasedPushTEnvB9(StateBasedPushTEnv):
             object_sliding_friction,
             object_torsional_friction,
             learn_jerk,
+            use_sparse_pose_reward,
             early_termination_steps,
             max_position_err,
             min_coverage,
