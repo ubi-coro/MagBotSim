@@ -89,8 +89,9 @@ Immediate Rewards
 -----------------
 
 The agent receives a reward similar to number of movers that reached their goal positions without 
-collisions within this timestep. In case of a collision, the agent receives a reward of -10. 
-If in a timestep no mover has reached its goal and no collisions have been detected, a reward of -1 is given.
+collisions within this timestep, multiplied by :math:`r_1\in\mathbb{R}`. In case of a collision, the agent receives a reward of :math:`r_2\in\mathbb{R}`. 
+If in a timestep no mover has reached its goal and no collisions have been detected, a reward of :math:`r_3\in\mathbb{R}` is given.
+:math:`r_1,r_2`, and :math:`r_3` can be configured, as these values are inputs to the environment with default values 20.0, -20.0, and -1.0, respectively.
 
 Episode Termination and Truncation
 ----------------------------------

@@ -81,6 +81,9 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         output.
     :param threshold_pos: the position threshold used to determine whether a mover has reached its goal position, defaults
         to 0.1 [m]
+    :param reward_success: reward in case of success multiplied with the number of goals reached in the current step, defaults to 20.0
+    :param reward_collision: reward in case of collision, defaults to -20.0
+    :param reward_per_step: reward per step (no collision and no goal reached), defaults to -1.0
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
     :param timeout_steps: the number of steps after which the episode is terminated if no goal is reached by any mover within that
@@ -107,6 +110,9 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         j_max: float = 100.0,
         learn_jerk: bool = False,
         threshold_pos: float = 0.1,
+        reward_success: float = 20.0,
+        reward_collision: float = -20.0,
+        reward_per_step: float = -1.0,
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
@@ -146,11 +152,11 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         # position threshold in m
         self.threshold_pos = threshold_pos
         # reward in case of success multiplied with the number of goals reached in the current step
-        self.reward_success = 20
+        self.reward_success = reward_success
         # reward in case of collision
-        self.reward_collision = -20
+        self.reward_collision = reward_collision
         # reward per step (no collision and no goal reached)
-        self.reward_per_step = -1.0
+        self.reward_per_step = reward_per_step
         # whether to show a 2D matplotlib plot
         self.show_2D_plot = show_2D_plot
 
