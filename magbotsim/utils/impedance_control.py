@@ -14,6 +14,7 @@ class MoverImpedanceController:
 
     :param model: mjModel of the MuJoCo environment
     :param mover_joint_name: the name of the joint of the mover in the MuJoCo model
+    :param mover_half_height: half the height of the mover
     :param joint_mask: None or a numpy array of shape (6,) which contains only 0 and 1, defaults to None.
         This array can be used to control only certain DoFs of a mover with this controller (1 for controlling a DoF).
         If set to None, all DoFs are controlled.
@@ -24,25 +25,32 @@ class MoverImpedanceController:
         Use the numpy array to specify different stiffness values for a (rotation about x-axis of the mover frame),
         b (rotation about y-axis of the mover frame) and c (rotation about z-axis of the mover frame). If only a single float value
         is specified, the same stiffness value is used for all rotational axes.
+    :param pose_err_scale: the scaling factors for the pose error, can be either a single float (same values for all error dimensions)
+            or a numpy array of shape (6,1) or (6,) containing values for each error dimension (order: pos error x,y,z, rot error a,b,c)
     """
 
     def __init__(
         self,
         model: MjModel,
         mover_joint_name: str,
+        mover_half_height: float,
         joint_mask: np.ndarray | None = None,
         translational_stiffness: np.ndarray | float = 1.0,
         rotational_stiffness: np.ndarray | float = 0.1,
+        pose_err_scale: np.ndarray | float = 1.0,
     ) -> None:
+        # mover data
         self.mover_joint_name = mover_joint_name
         self.mover_body_id = model.joint(self.mover_joint_name).bodyid[0]
+        self.mover_half_height = mover_half_height
+
         self.mover_dofadr = model.body(self.mover_body_id).dofadr[0]
         self.mover_dofnum = model.body(self.mover_body_id).dofnum[0]
 
         # configure stiffness matrix
         self.stiffness = np.zeros((6, 6))
-        self.stiffness[:3, :3] = self.init_stiffness_mat(stiffness=translational_stiffness)
-        self.stiffness[-3:, -3:] = self.init_stiffness_mat(stiffness=rotational_stiffness)
+        self.stiffness[:3, :3] = self._init_stiffness_mat(stiffness=translational_stiffness)
+        self.stiffness[-3:, -3:] = self._init_stiffness_mat(stiffness=rotational_stiffness)
         # configure damping matrix (damping ratio = 1)
         mover_mass = model.body(self.mover_body_id).mass[0]
         self.damping = 2 * np.sqrt(self.stiffness * mover_mass)
@@ -55,7 +63,22 @@ class MoverImpedanceController:
             assert (np.bitwise_or(joint_mask == 0, joint_mask == 1)).all()
             self.joint_mask = joint_mask.astype(np.bool)
 
-    def init_stiffness_mat(self, stiffness: np.ndarray | float) -> np.ndarray:
+        # error scaling
+        self.set_pose_err_scale(pose_err_scale)
+
+    def set_pose_err_scale(self, pose_err_scale: np.ndarray | float) -> None:
+        """Set scaling factors for the pose error.
+
+        :param pose_err_scale: the scaling factors, can be either a single float (same values for all error dimensions)
+            or a numpy array of shape (6,1) or (6,) containing values for each error dimension (order: pos error x,y,z, rot error a,b,c)
+        """
+        if isinstance(pose_err_scale, np.ndarray):
+            assert pose_err_scale.shape[0] == 6
+            if pose_err_scale.shape == (6,):
+                pose_err_scale = pose_err_scale.reshape((6, 1))
+        self.pose_err_scale = pose_err_scale
+
+    def _init_stiffness_mat(self, stiffness: np.ndarray | float) -> np.ndarray:
         """Initialize a stiffness matrix.
 
         :param stiffness: the stiffness values - either a numpy array of shape (3,) or a single float value
@@ -77,7 +100,7 @@ class MoverImpedanceController:
         assert (np.bitwise_or(new_joint_mask == 0, new_joint_mask == 1)).all()
         self.joint_mask = new_joint_mask.astype(np.bool)
 
-    def generate_actuator_xml_string(self, idx_mover: int):
+    def generate_actuator_xml_string(self, idx_mover: int) -> str:
         """Generate an actuator XML string which can be added to the MuJoCo model XML string. Note that only actuators for DoFs that
         are controlled by this controller are added. This method must be called manually by the user after the controller has been
         initialized.
@@ -103,11 +126,16 @@ class MoverImpedanceController:
 
         return ''.join(actuator_xml_lines)
 
-    def update_cached_actuator_mujoco_data(self, model: MjModel) -> None:
+    def update_cached_mujoco_data(self, model: MjModel) -> None:
         """Update all cached information about MuJoCo actuators, such as names and ids.
 
         :param model: mjModel of the MuJoCo environment
         """
+        # body
+        self.mover_body_id = model.joint(self.mover_joint_name).bodyid[0]
+        self.mover_dofadr = model.body(self.mover_body_id).dofadr[0]
+        self.mover_dofnum = model.body(self.mover_body_id).dofnum[0]
+        # actuators
         self.actuator_ids = np.zeros((len(self.actuator_names),), dtype=np.int32)
         for idx_a, actuator_name in enumerate(self.actuator_names):
             if len(actuator_name) > 0:
@@ -153,6 +181,7 @@ class MoverImpedanceController:
 
         # get Cartesian position and orientation of the mover
         xpos = data.xpos[self.mover_body_id, :]
+        xpos[2] -= self.mover_half_height
         xmat = data.xmat[self.mover_body_id, :].reshape(3, 3)
 
         error = np.zeros((6, 1))
@@ -164,7 +193,10 @@ class MoverImpedanceController:
         error[-3:, :] = xmat @ rot_vec.reshape((3, 1))  # ee frame orientation -> base frame orientation
 
         # compute controls
-        ctrl = self.joint_mask.astype(np.int64) * (jac.T @ (self.stiffness @ error - self.damping @ (jac @ dq))).flatten()
+        ctrl = (
+            self.joint_mask.astype(np.int64)
+            * (jac.T @ (self.stiffness @ (self.pose_err_scale * error) - self.damping @ (jac @ dq))).flatten()
+        )
 
         # modify the computed controls, if desired
         ctrl = self.ctrl_callback(ctrl=ctrl.copy())

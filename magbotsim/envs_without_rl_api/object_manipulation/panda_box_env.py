@@ -83,6 +83,7 @@ class PandaBoxExampleEnv(BasicMagBotEnv):
             MoverImpedanceController(
                 model=self.model,
                 mover_joint_name=self.mover_joint_names[mover_idx],
+                mover_half_height=self.mover_size[mover_idx, 2],
                 joint_mask=np.array([0, 1, 1, 1, 1, 1]),
                 translational_stiffness=np.array([1.0, 1.0, 1.0]),
                 rotational_stiffness=np.array([0.1, 0.1, 1]),
@@ -200,7 +201,7 @@ class PandaBoxExampleEnv(BasicMagBotEnv):
         # update cached mujoco data
         self.update_cached_mover_mujoco_data()
         for idx_mover in range(0, self.num_movers):
-            self.impedance_controllers[idx_mover].update_cached_actuator_mujoco_data(self.model)
+            self.impedance_controllers[idx_mover].update_cached_mujoco_data(self.model)
 
         # render the environment after reloading
         if self.render_mode is not None:

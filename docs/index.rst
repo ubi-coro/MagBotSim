@@ -189,6 +189,7 @@ Learn More
 .. toctree::
    :maxdepth: 2
 
+   magbots
    environments
    api_reference
    examples_tutorials
