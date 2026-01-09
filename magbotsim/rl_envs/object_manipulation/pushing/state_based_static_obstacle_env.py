@@ -244,6 +244,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         self.impedance_controller = MoverImpedanceController(
             model=self.model,
             mover_joint_name=self.mover_joint_names[0],
+            mover_half_height=self.mover_size[0, 2],
             joint_mask=np.array([0, 0, 1, 1, 1, 1]),
             translational_stiffness=1.0,
             rotational_stiffness=0.1,
@@ -283,7 +284,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
             self.mover_actuator_x_ids[idx_a] = self.model.actuator(actuator_x_name).id
             self.mover_actuator_y_ids[idx_a] = self.model.actuator(self.mover_actuator_y_names[idx_a]).id
 
-        self.impedance_controller.update_cached_actuator_mujoco_data(self.model)
+        self.impedance_controller.update_cached_mujoco_data(self.model)
 
         # object
         object_joint_name = mujoco_utils.get_mujoco_type_names(self.model, obj_type='joint', name_pattern='object')[0]

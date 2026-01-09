@@ -165,6 +165,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
             MoverImpedanceController(
                 model=self.model,
                 mover_joint_name=self.mover_joint_names[mover_idx],
+                mover_half_height=self.mover_size[mover_idx, 2],
                 joint_mask=np.array([0, 0, 1, 1, 1, 1]),
                 translational_stiffness=np.array([1.0, 1.0, 100.0]),
                 rotational_stiffness=np.array([0.1, 0.1, 1]),
@@ -293,7 +294,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
             self.mover_actuator_y_ids[idx_a] = self.model.actuator(self.mover_actuator_y_names[idx_a]).id
 
         for mover_idx in range(self.num_movers):
-            self.impedance_controllers[mover_idx].update_cached_actuator_mujoco_data(self.model)
+            self.impedance_controllers[mover_idx].update_cached_mujoco_data(self.model)
 
     def _custom_xml_string_callback(self, custom_model_xml_strings: dict | None) -> dict[str, str]:
         """For each mover, this callback adds actuators to the ``custom_model_xml_strings``-dict, depending on whether the jerk or

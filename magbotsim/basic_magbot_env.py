@@ -16,7 +16,7 @@ INVALID_MOVER_SHAPE_ERROR = "Invalid mover shape. Supported shapes are: 'box', '
 
 
 class BasicMagBotEnv:
-    """A base class for reinforcement learning environments in the field of Magnetic Robotics that is based on MuJoCo.
+    """A base class for environments in the field of Magnetic Robotics that is based on MuJoCo.
     Note that MuJoCo does not specify basic physical units (for a more detailed explanation, see
     https://mujoco.readthedocs.io/en/stable/overview.html#units-are-unspecified). Thus, this environment can be used with user-specific
     units. However, note that the units m and kg are used for the default parameters.
@@ -1017,13 +1017,12 @@ class BasicMagBotEnv:
                 f' scale="{size[0]} {size[1]} {size[2]}" />'
             )
 
-            body_str = (
-                f'\n\t\t<body name="{body_name}" pos="{x_pos} {y_pos} {z_pos}" gravcomp="1">'
-                + f'\n\t\t\t<joint name="mover_joint_{idx_mover}" type="free" damping="0" />'
-                + f'\n\t\t\t<geom name="{mover_geom_name}" type="mesh" mesh="{mover_mesh_name}" '
-                + f'mass="{mass}" pos="0 0 0" material="{material}" priority="1" '
-                + f'friction="{friction[0]} {friction[1]} {friction[2]}"/>'
-            )
+            body_list = [
+                f'\t\t<body name="{body_name}" pos="{x_pos} {y_pos} {z_pos}" gravcomp="1">',
+                f'\t\t\t<joint name="mover_joint_{idx_mover}" type="free" damping="0" />',
+                f'\t\t\t<geom name="{mover_geom_name}" type="mesh" mesh="{mover_mesh_name}" '
+                f'mass="{mass}" pos="0 0 0" material="{material}" priority="1" friction="{friction[0]} {friction[1]} {friction[2]}"/>',
+            ]
 
             if self.mover_mesh_bumper_stl_path is not None:
                 asset_str += (
@@ -1036,12 +1035,13 @@ class BasicMagBotEnv:
                 else:
                     bumper_mass = self.mover_mesh_bumper_mass
 
-                body_str += (
-                    f'\n\t\t\t<geom name="{bumper_geom_name}" type="mesh" mesh="{bumper_mesh_name}" '
+                body_list.append(
+                    f'\t\t\t<geom name="{bumper_geom_name}" type="mesh" mesh="{bumper_mesh_name}" '
                     f'mass="{bumper_mass}" pos="0 0 0" material="black" priority="1" '
-                    f'friction="{friction[0]} {friction[1]} {friction[2]}"/>'
+                    f'friction="{friction[0]} {friction[1]} {friction[2]}"/>',
                 )
                 geom_name = bumper_geom_name
+            body_str = '\n'.join(body_list)
         else:
             raise ValueError(INVALID_MOVER_SHAPE_ERROR)
 
@@ -1290,11 +1290,11 @@ class BasicMagBotEnv:
                 f'size="{(self.num_tiles_x * (self.tile_size[0] * 2) + 0.1) / 2} '
                 f'{(self.num_tiles_y * (self.tile_size[1] * 2) + 0.1) / 2} {self.table_height / 2}" '
                 'type="box" material="gray" mass="20"/>',
-                '\t\t<!-- tiles -->',
+                '\n\t\t<!-- tiles -->',
                 f'\t\t<body name="tile_body" childclass="magnetic_robotics" pos="0 0 {-self.tile_size[2]}" gravcomp="1">',
                 tile_xml_str,
                 '\t\t</body>',
-                '\t\t<!-- movers -->',
+                '\n\t\t<!-- movers -->',
                 mover_xml_str,
                 custom_worldbody_xml_str,
                 '\t</worldbody>',

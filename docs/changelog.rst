@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Release v1.0.2 (2026-02-27)
+---------------------------
+
+General
+^^^^^^^
+1. Add the 6D-Platform MagBot (``SixDPlatformMagBotsAPM4330``)
+2. Add tutorial on how to add MagBots to custom environment
+3. Add example environments with MagBots (``SixDPlatformMagBotApplicationExampleEnv`` and ``SixDPlatformMagBotExampleEnv``)
+
 Release v1.0.1 (2025-11-24)
 ---------------------------
 
