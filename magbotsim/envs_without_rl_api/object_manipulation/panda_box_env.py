@@ -201,7 +201,7 @@ class PandaBoxExampleEnv(BasicMagBotEnv):
         # update cached mujoco data
         self.update_cached_mover_mujoco_data()
         for idx_mover in range(0, self.num_movers):
-            self.impedance_controllers[idx_mover].update_cached_actuator_mujoco_data(self.model)
+            self.impedance_controllers[idx_mover].update_cached_mujoco_data(self.model)
 
         # render the environment after reloading
         if self.render_mode is not None:
