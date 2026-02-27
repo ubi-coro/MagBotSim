@@ -1,10 +1,11 @@
-__version__ = '1.0.2a2'
+__version__ = '1.0.2'
 
 from gymnasium.envs.registration import register
 
 from magbotsim.basic_magbot_env import BasicMagBotEnv
 from magbotsim.rl_envs.basic_multi_agent_env import BasicMagBotMultiAgentEnv
 from magbotsim.rl_envs.basic_single_agent_env import BasicMagBotSingleAgentEnv
+from magbotsim.magbots.sixD_platform import SixDPlatformMagBotsAPM4330
 from magbotsim.utils.benchmark_utils import BENCHMARK_PLANNING_LAYOUTS
 from magbotsim.utils.impedance_control import MoverImpedanceController
 from magbotsim.utils.rendering import Matplotlib2DViewer, MujocoViewerCollection
@@ -16,6 +17,7 @@ __all__ = [
     'Matplotlib2DViewer',
     'MoverImpedanceController',
     'MujocoViewerCollection',
+    'SixDPlatformMagBotsAPM4330',
 ]
 
 

@@ -10,6 +10,7 @@ dofadr
 effector
 Emika
 env
+euler
 Franka
 geomgroup
 geoms
@@ -17,6 +18,7 @@ Halbach
 initialise
 lh
 macOS
+magbots
 Makespan
 matplotlib
 mjData
@@ -45,7 +47,9 @@ qacc
 qpos
 qposadr
 quaternion
+quaternions
 qvel
+reconfigurable
 renderer
 renderers
 resampled
@@ -68,4 +72,5 @@ XBot
 xml
 XPlanar
 xy
+xyz
 Zsh

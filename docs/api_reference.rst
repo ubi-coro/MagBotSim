@@ -1,7 +1,7 @@
 API Reference
 =============
 
-A detailed documentation of all basic environments and utilities can be found in the following subsections:
+A detailed documentation of all basic environments, MagBots, and utilities can be found in the following subsections:
 
 .. toctree::
    :maxdepth: 1
@@ -10,6 +10,12 @@ A detailed documentation of all basic environments and utilities can be found in
    api_reference/basic_env
    api_reference/basic_single_env
    api_reference/basic_multi_env
+
+.. toctree::
+   :maxdepth: 1
+   :caption: MagBots
+
+   api_reference/sixD_platform_magbot
 
 .. toctree::
    :maxdepth: 1

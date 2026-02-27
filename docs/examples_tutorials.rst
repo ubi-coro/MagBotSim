@@ -13,6 +13,8 @@ Please use one of our :ref:`environments` as more extensive examples of how to u
    examples_tutorials/create_env
    examples_tutorials/customizing_mujoco_model
    examples_tutorials/applying_controls_and_collision_checking_tutorial
+   examples_tutorials/adding_magbots
+
 
 .. toctree::
    :maxdepth: 1

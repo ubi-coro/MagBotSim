@@ -120,7 +120,7 @@ class PandaBoxExampleEnv(BasicMagBotEnv):
         """Add the Franka Emika Panda robot and a box to the MuJoCo model, as well as actuators for the movers and
         the Panda robot by modifying the ``custom_model_xml_strings``-dict.
 
-        :param custom_model_xml_strings: the current ``custom_model_xml_strings``-dict which is modified by this callback
+        :param custom_model_xml_strings: the current ``custom_model_xml_strings``-dict which is modified by this callback, defaults to None
         :return: the modified ``custom_model_xml_strings``-dict
         """
         if custom_model_xml_strings is None:

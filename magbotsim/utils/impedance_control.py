@@ -52,8 +52,8 @@ class MoverImpedanceController:
         self.stiffness[:3, :3] = self._init_stiffness_mat(stiffness=translational_stiffness)
         self.stiffness[-3:, -3:] = self._init_stiffness_mat(stiffness=rotational_stiffness)
         # configure damping matrix (damping ratio = 1)
-        mover_mass = model.body(self.mover_body_id).mass[0]
-        self.damping = 2 * np.sqrt(self.stiffness * mover_mass)
+        self.mover_mass = model.body(self.mover_body_id).subtreemass[0]
+        self.damping = 2 * np.sqrt(self.stiffness * self.mover_mass)
 
         # enable/disable joints
         if joint_mask is None:
@@ -135,6 +135,8 @@ class MoverImpedanceController:
         self.mover_body_id = model.joint(self.mover_joint_name).bodyid[0]
         self.mover_dofadr = model.body(self.mover_body_id).dofadr[0]
         self.mover_dofnum = model.body(self.mover_body_id).dofnum[0]
+        self.mover_mass = model.body(self.mover_body_id).subtreemass[0]
+        self.damping = 2 * np.sqrt(self.stiffness * self.mover_mass)
         # actuators
         self.actuator_ids = np.zeros((len(self.actuator_names),), dtype=np.int32)
         for idx_a, actuator_name in enumerate(self.actuator_names):
@@ -151,17 +153,21 @@ class MoverImpedanceController:
         """
         return ctrl
 
-    def update(self, model: MjModel, data: MjData, pos_d: np.ndarray, quat_d: np.ndarray) -> None:
+    def update(self, model: MjModel, data: MjData, pos_d: np.ndarray, quat_d: np.ndarray, additional_mass: float = 0.0) -> None:
         """Compute new controls based on the position and orientation error.
 
         :param model: mjModel of the MuJoCo environment
         :param data: mjData of the MuJoCo environment
         :param pos_d: the desired position (x_p,y_p,z_p) specified as a numpy array of shape (3,)
         :param quat_d: the desired orientation, specified as a quaternion (w_o,x_o,y_o,z_o), i.e. numpy array of shape (4,)
+        :param additional_mass: any additional mass (float), e.g. the mass of an object the mover is transporting, defaults to 0.0
         """
         assert pos_d.shape == (3,)
         assert quat_d.shape == (4,)
         quat_d = quat_d.astype(np.float64)
+
+        # update damping if required
+        self.damping = 2 * np.sqrt(self.stiffness * (self.mover_mass + additional_mass))
 
         # desired rot mat
         xmat_d = np.zeros((9,))
