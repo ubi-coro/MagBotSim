@@ -185,7 +185,7 @@ described in the `documentation <https://stable-baselines3.readthedocs.io/en/mas
     collision_params = {'shape': 'box', 'size': np.array([0.113 / 2 + 1e-6, 0.113 / 2 + 1e-6]), 'offset': 0.0, 'offset_wall': 0.0}
     env_params = {'mover_params': mover_params, 'collision_params': collision_params, 'render_mode': render_mode}
 
-    env = gym.make('StateBasedObjectPushingEnv-v0', **env_params)
+    env = gym.make('StateBasedGlobalPushingEnv-v0', **env_params)
     # copy_info_dict=True, as information about collisions is stored in the info dictionary to avoid
     # computationally expensive collision checking calculations when the data is relabeled (HER)
     model = SAC(

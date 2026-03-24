@@ -143,7 +143,7 @@ To use the example, please install Stable-Baselines3 as described in the
     mover_params = {'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': 0.628}
     collision_params = {'shape': 'box', 'size': np.array([0.113 / 2 + 1e-6, 0.113 / 2 + 1e-6]), 'offset': 0.0, 'offset_wall': 0.0}
     env_params = {
-        'layout_tiles_list': [np.ones((5,5))],
+        'layout_tiles': np.ones((5,5)),
         'num_movers': 5,
         'show_2D_plot': False,
         'mover_params': mover_params,
