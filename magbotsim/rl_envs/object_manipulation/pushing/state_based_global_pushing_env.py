@@ -1025,7 +1025,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                     break
 
                 geom = self.model.geom(geom_id)
-                geoms[geom_idx, 0] = geom.type
+                geoms[geom_idx, 0] = geom.type.item()
                 geoms[geom_idx, 1:3] = geom.size[:2]
                 geoms[geom_idx, 3:5] = geom.pos[:2]
                 geom_idx += 1
