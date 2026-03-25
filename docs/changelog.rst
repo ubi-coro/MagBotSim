@@ -1,12 +1,13 @@
 Changelog
 =========
 
-Pre-Release v1.0.3a1 (2026-03-24)
----------------------------------
+Release v1.0.3 (2026-03-25)
+---------------------------
 
 General
 ^^^^^^^
-1. Fix bugs in RL examples
+1. Fix bug in ``StateBasedGlobalPushingEnv-v0`` 
+2. Update RL examples
 
 Release v1.0.2 (2026-02-27)
 ---------------------------

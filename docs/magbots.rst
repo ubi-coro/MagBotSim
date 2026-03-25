@@ -7,13 +7,13 @@ MagBots
 
    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
 
-      <iframe width="320" height="180"
+      <iframe width="640" height="360"
             src="https://www.youtube.com/embed/gAb7l0zvhG0?autoplay=1&mute=1&loop=1&playlist=gAb7l0zvhG0"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen></iframe>
 
-      <iframe width="320" height="180"
+      <iframe width="640" height="360"
             src="https://www.youtube.com/embed/ipE8ZpbkTMI?autoplay=1&mute=1&loop=1&playlist=ipE8ZpbkTMI"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
