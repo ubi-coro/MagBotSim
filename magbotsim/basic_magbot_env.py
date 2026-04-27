@@ -765,7 +765,7 @@ class BasicMagBotEnv:
         # Only count intersections against walls that actually exist for this mover
         valid_wall = np.arange(walls.shape[1])[np.newaxis, :] < n_walls[:, np.newaxis]  # (n, max_walls)
 
-        return np.any(valid_wall & (dist_sq < radii**2), axis=1)
+        return np.any(valid_wall & (dist_sq <= radii**2), axis=1)
 
     @staticmethod
     def _box_walls_intersect_fast(
