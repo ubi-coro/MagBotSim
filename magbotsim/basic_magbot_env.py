@@ -788,7 +788,7 @@ class BasicMagBotEnv:
         hx = sizes[:, 0, np.newaxis]
         hy = sizes[:, 1, np.newaxis]
 
-        # Yaw angle extracted from quaternion stored as (w, qx, qy, qz) at indices 3–6
+        # Yaw angle extracted from quaternion stored as (w, qx, qy, qz) at indices 3-6
         w_q = qpos[:, 3]
         q_x = qpos[:, 4]
         q_y = qpos[:, 5]
