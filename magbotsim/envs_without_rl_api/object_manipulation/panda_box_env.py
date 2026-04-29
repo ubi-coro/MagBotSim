@@ -156,12 +156,16 @@ class PandaBoxExampleEnv(BasicMagBotEnv):
             actuator_lines = ['\n\n\t<actuator>']
 
             for idx_mover in range(0, self.num_movers):
+                joint_name = self.mover_joint_names[idx_mover]
+                mover_body_id = self.model.joint(joint_name).bodyid[0]
+                mover_mass = self.model.body(mover_body_id).subtreemass[0]
+
                 actuator_lines.append(f'\n\t\t<!-- actuators mover {idx_mover} -->')
                 actuator_lines.append(
                     f'\n\t\t<general name="mover_actuator_x_{idx_mover}" '
                     f'joint="{self.mover_joint_names[idx_mover]}" '
                     f'gear="1 0 0 0 0 0" dyntype="none" gaintype="fixed" '
-                    f'gainprm="{self.mover_mass[idx_mover]} 0 0" biastype="none"/>'
+                    f'gainprm="{mover_mass} 0 0" biastype="none"/>'
                 )
                 actuator_lines.append(self.impedance_controllers[idx_mover].generate_actuator_xml_string(idx_mover=idx_mover))
                 actuator_lines.append('\n')

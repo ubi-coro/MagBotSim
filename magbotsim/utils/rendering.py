@@ -5,6 +5,7 @@
 import numpy as np
 import mujoco.viewer
 from gymnasium.envs.mujoco.mujoco_rendering import MujocoRenderer, BaseRender, OffScreenViewer, WindowViewer
+from gymnasium import logger
 from mujoco import MjData, MjModel
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
@@ -91,8 +92,8 @@ class MujocoOffScreenViewer(OffScreenViewer):
         :param geomgroup: a numpy array of shape (6,), where each entry is either 0 or 1, specifying the groups of geoms to be
             rendered by the camera
         """
-        assert geomgroup.shape == (6,), 'Invalid geomgroup shape. Expected: (6,)'
-        assert np.issubdtype(geomgroup.dtype, np.integer), 'Dtype geomgroup is not an integer'
+        assert geomgroup.shape == (6,), logger.error('Invalid geomgroup shape. Expected: (6,)')
+        assert np.issubdtype(geomgroup.dtype, np.integer), logger.error('Dtype geomgroup is not an integer')
         self.vopt.geomgroup = geomgroup
 
 
@@ -206,7 +207,7 @@ class MujocoViewerCollection(MujocoRenderer):
         if render_mode.startswith('human'):
             return render_mode
         else:
-            assert render_mode in ['rgb_array', 'depth_array'], f'Unkown render mode: {render_mode}'
+            assert render_mode in ['rgb_array', 'depth_array'], logger.error(f'Unkown render mode: {render_mode}')
             return render_mode + f'_{camera_id}'
 
     def _update_viewer(

@@ -215,13 +215,13 @@ class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
         """
         # make sure that shape is correct and action is within action space
         if not isinstance(action, int):
-            assert action.shape == self.action_space.shape, 'action dim != action_space dim'
+            assert action.shape == self.action_space.shape, logger.error('action dim != action_space dim')
             if not self.action_space.contains(action):
                 logger.warn(f'Action {action} not in action space. Will clip invalid values to interval edges.')
                 action = np.clip(action, self.action_space.low, self.action_space.high)
 
         # custom callback to add more functionality
-        self._step_callback(action)
+        action = self._step_callback(action)
 
         # integration and collision check
         for _ in range(0, self.num_cycles):
@@ -306,13 +306,14 @@ class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
         """
         pass
 
-    def _step_callback(self, action: int | np.ndarray) -> None:
+    def _step_callback(self, action: int | np.ndarray) -> np.ndarray:
         """A callback that should be used to add further functionality to the ``step()`` method (see documentation of the ``step()``
         method for more information about when the callback is called).
 
         :param action: the action to apply
+        :return: the possibly modified action
         """
-        pass
+        return action
 
     def _on_step_end_callback(self, observation: dict[str, np.ndarray] | np.ndarray) -> None:
         """A callback that should be used to add further functionality to the ``step()`` method (see documentation of the ``step()``

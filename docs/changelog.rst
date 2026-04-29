@@ -1,6 +1,19 @@
 Changelog
 =========
 
+Pre-Release v1.0.4a0 (2026-04-29)
+---------------------------------
+
+General
+^^^^^^^
+1. The ``_step_callback`` of the ``BasicMagBotSingleAgentEnv`` now returns the possibly modified action instead of None.
+
+Bug Fixes
+^^^^^^^^^
+1. Fix wrong mover bumper mass and corresponding examples in the documentation
+2. Fix wrong gainprm in all RL environments
+3. Ensure correct maximum dynamics of the actions (RL environments). This is fixed by using the ``_step_callback``.
+
 Release v1.0.3 (2026-03-25)
 ---------------------------
 
@@ -15,7 +28,7 @@ Release v1.0.2 (2026-02-27)
 General
 ^^^^^^^
 1. Add the 6D-Platform MagBot (``SixDPlatformMagBotsAPM4330``)
-2. Add tutorial on how to add MagBots to custom environment
+2. Add tutorial on how to add MagBots to custom environments
 3. Add example environments with MagBots (``SixDPlatformMagBotApplicationExampleEnv`` and ``SixDPlatformMagBotExampleEnv``)
 
 Release v1.0.1 (2025-11-24)

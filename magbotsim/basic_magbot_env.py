@@ -38,7 +38,13 @@ class BasicMagBotEnv:
             - Single float: Same mass for all movers
             - 1D array (num_movers,): Individual masses per mover
 
-        Default: 1.24 [kg]
+            Default: 1.24 [kg]
+
+        - bumper_mass (float | numpy.ndarray): Bumper mass in kilograms. Only used, if a bumper mesh is specified (see below). Options:
+            - Single float: Same mass applied to all bumpers
+            - 1D array (num_movers,): Individual masses for each bumper
+
+            Default: 0.0 [kg]
 
         - shape (str | list[str]): Mover shape type. Must be one of:
             - 'box': Rectangular cuboid
@@ -46,6 +52,7 @@ class BasicMagBotEnv:
             - 'mesh': Custom 3D mesh
 
             Specification options:
+
             - str: Same shape for all movers
             - list[str] with length ``num_movers``: Individual shapes per mover
 
@@ -57,27 +64,23 @@ class BasicMagBotEnv:
             - For 'mesh': Computed from mesh dimensions multiplied by scale factors in mesh['scale']
 
             Specification options:
+
             - 1D array (3,): Same size for all movers
             - 2D array (num_movers, 3): Individual sizes per mover
 
             Default: [0.155/2, 0.155/2, 0.012/2] [m]
 
         - mesh (dict): Configuration for mesh-based shapes. Required when shape='mesh'. Contains:
-            - mover_stl_path (str | list[str]): Path to mover mesh STL file or one of the predefined meshes, defaults to
-                ``beckhoff_apm4330_mover`` (Beckhoff APM4220 mover)
-            - bumper_stl_path (str | list[str] | None): Path to bumper mesh STL file or one of the predefined meshes, defaults to
-                ``beckhoff_apm4330_bumper`` (Beckhoff APM4330 bumper)
-            - bumper_mass (float | numpy.ndarray): Bumper mass in kilograms. Can be specified as:
-                - Single float: Same mass applied to all bumpers
-                - 1D array (num_movers,): Individual masses for each bumper
+            - mover_stl_path (str | list[str]): Path to mover mesh STL file or one of the predefined meshes
+            - bumper_stl_path (str | list[str] | None): Path to bumper mesh STL file or one of the predefined meshes, defaults to None
+            - scale (numpy.ndarray): Scale factors for mesh dimensions (x, y, z). Multiplied with the mesh geometry.
 
-                Default: 0.1 [kg]
-            - scale (numpy.ndarray): Scale factors for mesh dimensions (x, y, z). Multiplied with the
-                mesh geometry. Specification options:
-                - 1D array (3,): Same scale factors applied to all movers
-                - 2D array (num_movers, 3): Individual scale factors for each mover
+              Specification options:
 
-                Default: [1.0, 1.0, 1.0] (no scaling)
+              - 1D array (3,): Same scale factors applied to all movers
+              - 2D array (num_movers, 3): Individual scale factors for each mover
+
+              Default: [1.0, 1.0, 1.0] (no scaling)
 
             Note: Custom mesh STL files must have their origin at the mover's center.
 
@@ -234,15 +237,17 @@ class BasicMagBotEnv:
         if mover_params is None:
             mover_params = {}
         self.mover_mass = mover_params.get('mass', 1.24)
+        self.mover_bumper_mass = mover_params.get('bumper_mass', 0.0)
         self.mover_shape = mover_params.get('shape', 'box')
         self.mover_material = mover_params.get('material')
         self.mover_friction = mover_params.get('friction', np.array([1.0, 0.005, 0.0001]))
 
         mover_mesh = mover_params.get('mesh', {})
-        self.mover_mesh_mover_stl_path = self._resolve_mover_mesh_path(mover_mesh.get('mover_stl_path', 'beckhoff_apm4330_mover'))
-        self.mover_mesh_bumper_stl_path = self._resolve_mover_mesh_path(mover_mesh.get('bumper_stl_path', 'beckhoff_apm4330_bumper'))
-        self.mover_mesh_bumper_mass = mover_mesh.get('bumper_mass', 0.1)
         self.mover_mesh_scale = mover_mesh.get('scale', np.array([1, 1, 1]))
+        if 'mesh' in mover_params.keys():
+            assert 'mover_stl_path' in mover_params['mesh'].keys(), "Mover shape is 'mesh', but no mover mesh file is specified."
+            self.mover_mesh_mover_stl_path = self._resolve_mover_mesh_path(mover_mesh['mover_stl_path'])
+            self.mover_mesh_bumper_stl_path = self._resolve_mover_mesh_path(mover_mesh.get('bumper_stl_path', None))
 
         self.initial_mover_zpos = initial_mover_zpos
 
@@ -1030,10 +1035,14 @@ class BasicMagBotEnv:
                     f' scale="{size[0]} {size[1]} {size[2]}" />'
                 )
 
-                if isinstance(self.mover_mesh_bumper_mass, np.ndarray):
-                    bumper_mass = self.mover_mesh_bumper_mass[idx_mover]
+                assert (isinstance(self.mover_bumper_mass, float) and self.mover_bumper_mass >= 0) or (
+                    isinstance(self.mover_bumper_mass, np.ndarray) and (self.mover_bumper_mass >= 0).all()
+                ), 'Mover bumper mass must be non-negative.'
+
+                if isinstance(self.mover_bumper_mass, np.ndarray):
+                    bumper_mass = self.mover_bumper_mass[idx_mover]
                 else:
-                    bumper_mass = self.mover_mesh_bumper_mass
+                    bumper_mass = self.mover_bumper_mass
 
                 body_list.append(
                     f'\t\t\t<geom name="{bumper_geom_name}" type="mesh" mesh="{bumper_mesh_name}" '
@@ -1633,7 +1642,19 @@ class BasicMagBotEnv:
             assert self.mover_shape in valid_shapes, f"Invalid mover shape '{self.mover_shape}'. Must be one of: 'box', 'cylinder', 'mesh'."
 
         # check mover mesh params
-        assert self.mover_mesh_bumper_mass >= 0, 'Bumper mass must be non-negative.'
+        if hasattr(self, 'mover_mesh_bumper_stl_path'):
+            if self.mover_mesh_bumper_stl_path is None:
+                assert (isinstance(self.mover_bumper_mass, float) and self.mover_bumper_mass == 0) or (
+                    isinstance(self.mover_bumper_mass, np.ndarray) and (self.mover_bumper_mass == 0).all()
+                ), 'Mover bumper mass is != 0, but no mover bumper mesh file is specified, i.e. no bumper is used.'
+            else:
+                assert (isinstance(self.mover_bumper_mass, float) and self.mover_bumper_mass >= 0) or (
+                    isinstance(self.mover_bumper_mass, np.ndarray) and (self.mover_bumper_mass >= 0).all()
+                ), 'Mover bumper mass must be non-negative.'
+        else:
+            assert (isinstance(self.mover_bumper_mass, float) and self.mover_bumper_mass == 0) or (
+                isinstance(self.mover_bumper_mass, np.ndarray) and (self.mover_bumper_mass == 0).all()
+            ), 'Mover bumper mass is != 0, but no mover bumper mesh file is specified, i.e. no bumper is used.'
 
     def _check_collision_params(self) -> None:
         """Check that the collision shape and the size of the collision shape are as expected."""

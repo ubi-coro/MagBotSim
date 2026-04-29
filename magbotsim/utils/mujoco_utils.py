@@ -5,6 +5,7 @@
 import numpy as np
 import mujoco
 from mujoco import MjData, MjModel, mjtObj
+from gymnasium import logger
 
 
 def set_actuator_ctrl(model: MjModel, data: MjData, actuator_name: str, value: float) -> None:
@@ -16,7 +17,7 @@ def set_actuator_ctrl(model: MjModel, data: MjData, actuator_name: str, value: f
     :param value: the control input of the actuator
     """
     actuator_id = model.actuator(actuator_name).id
-    assert actuator_id != -1, 'Actuator name not found in MuJoCo model.'
+    assert actuator_id != -1, logger.error('Actuator name not found in MuJoCo model.')
     data.ctrl[actuator_id] = value
 
 
@@ -29,7 +30,7 @@ def get_joint_qacc(model: MjModel, data: MjData, name: str) -> np.ndarray:
     :return: the qacc of the joint
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    assert joint_id != -1, 'Joint name not found in MuJoCo model.'
+    assert joint_id != -1, logger.error('Joint name not found in MuJoCo model.')
     joint_type = model.jnt_type[joint_id]
     joint_addr = model.jnt_dofadr[joint_id]
 
@@ -70,7 +71,7 @@ def get_joint_addrs_and_ndims(model: MjModel, name: str) -> tuple[int, int, int,
     :return: the qposadr, dofadr, qpos ndim, and qvel/qacc ndim of the joint
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    assert joint_id != -1, 'Joint name not found in MuJoCo model.'
+    assert joint_id != -1, logger.error('Joint name not found in MuJoCo model.')
     joint_type = model.jnt_type[joint_id]
     joint_qpos_addr = model.jnt_qposadr[joint_id]
     joint_qvel_qacc_addr = model.jnt_dofadr[joint_id]
@@ -114,7 +115,7 @@ def set_joint_qpos(model: MjModel, data: MjData, name: str, value: float | np.nd
     :param value: the new qpos
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    assert joint_id != -1, 'Joint name not found in MuJoCo model.'
+    assert joint_id != -1, logger.error('Joint name not found in MuJoCo model.')
     joint_type = model.jnt_type[joint_id]
     joint_addr = model.jnt_qposadr[joint_id]
 
@@ -130,7 +131,7 @@ def set_joint_qpos(model: MjModel, data: MjData, name: str, value: float | np.nd
     end_idx = joint_addr + ndim
     value = np.array(value)
     if ndim > 1:
-        assert value.shape == (end_idx - start_idx), f'Value has incorrect shape {name}: {value}'
+        assert value.shape == (end_idx - start_idx), logger.error(f'Value has incorrect shape {name}: {value}')
     data.qpos[start_idx:end_idx] = value
 
 
@@ -143,7 +144,7 @@ def get_joint_qpos(model: MjModel, data: MjData, name: str) -> np.ndarray:
     :return: the qpos of the joint
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    assert joint_id != -1, 'Joint name not found in MuJoCo model.'
+    assert joint_id != -1, logger.error('Joint name not found in MuJoCo model.')
     joint_type = model.jnt_type[joint_id]
     joint_addr = model.jnt_qposadr[joint_id]
 
@@ -170,7 +171,7 @@ def set_joint_qvel(model: MjModel, data: MjData, name: str, value: float | np.nd
     :param value: the new qvel
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    assert joint_id != -1, 'Joint name not found in MuJoCo model.'
+    assert joint_id != -1, logger.error('Joint name not found in MuJoCo model.')
     joint_type = model.jnt_type[joint_id]
     joint_addr = model.jnt_dofadr[joint_id]
 
@@ -186,7 +187,7 @@ def set_joint_qvel(model: MjModel, data: MjData, name: str, value: float | np.nd
     end_idx = joint_addr + ndim
     value = np.array(value)
     if ndim > 1:
-        assert value.shape == (end_idx - start_idx), f'Value has incorrect shape {name}: {value}'
+        assert value.shape == (end_idx - start_idx), logger.error(f'Value has incorrect shape {name}: {value}')
     data.qvel[start_idx:end_idx] = value
 
 
@@ -199,7 +200,7 @@ def get_joint_qvel(model: MjModel, data: MjData, name: str) -> np.ndarray:
     :return: the qvel of the joint
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-    assert joint_id != -1, 'Joint name not found in MuJoCo model.'
+    assert joint_id != -1, logger.error('Joint name not found in MuJoCo model.')
     joint_type = model.jnt_type[joint_id]
     joint_addr = model.jnt_dofadr[joint_id]
 

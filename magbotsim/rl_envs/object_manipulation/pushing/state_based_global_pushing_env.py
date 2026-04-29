@@ -80,8 +80,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
     :param object_types: a sequence of strings that specifies which object types can be used, defaults to DEFAULT_OBJECT_TYPES.
         Valid object types are: 'square_box', 'box', 'cylinder', 't_shape', 'l_shape', 'plus_shape'
-    :param object_ranges: a dictionary that specifies the range of object parameters for random sampling, defaults to
-        DEFAULT_OBJECT_RANGES.
+    :param object_ranges: a dictionary that specifies the range of object parameters for random sampling, defaults to DEFAULT_OBJECT_RANGES.
         Keys can include 'width', 'height', 'depth', 'segment_width', 'radius', 'mass'. Each value is a tuple (min_value, max_value)
     :param object_sliding_friction: the sliding friction coefficient of the object, defaults to 1.0
     :param object_torsional_friction: the torsional friction coefficient of the object, defaults to 0.005
@@ -488,7 +487,8 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
             for idx_mover in range(self.num_movers):
                 joint_name = self.mover_joint_names[idx_mover]
-                mover_mass = self.mover_mass if isinstance(self.mover_mass, float) else self.mover_mass[idx_mover]
+                mover_body_id = self.model.joint(joint_name).bodyid[0]
+                mover_mass = self.model.body(mover_body_id).subtreemass[0]
 
                 if self.learn_jerk:
                     mover_actuator_list.extend(
@@ -678,13 +678,31 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.num_elapsed_cycles = 0
         self.success_counter = 0
 
+    def _step_callback(self, action):
+        """Ensures the maximum dynamics of the actions (accelerations or jerks).
+
+        :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
+        :return: the possibly modified action (shape: (num_movers,2))
+        """
+        action = action.reshape((self.num_movers, 2))
+
+        # ensure maximum acceleration or jerk
+        max_action_dyn = self.j_max if self.learn_jerk else self.a_max
+        action_norm_tmp = np.linalg.norm(action, ord=2, axis=1)
+        action_norm = np.where(action_norm_tmp <= max_action_dyn, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, max_action_dyn)
+        action = np.divide(action, action_norm) * action_max_vals
+
+        return action
+
     def _before_mujoco_step_callback(self, action: np.ndarray) -> None:
         """Apply the next action, i.e. it sets the jerk or acceleration, ensuring the minimum and maximum velocity and acceleration
         (for one cycle).
 
         :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
         """
-        action = action.reshape((self.num_movers, 2))
+        if action.shape != (self.num_movers, 2):
+            action = action.reshape((self.num_movers, 2))
 
         vel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)[:, :2]
         if self.learn_jerk:
@@ -708,11 +726,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                 model=self.model,
                 data=self.data,
                 pos_d=np.array(
-                    [
-                        0,
-                        0,
-                        self.initial_mover_zpos + self.mover_size[mover_idx, 2] if self.mover_size.ndim == 2 else self.mover_size[2],
-                    ]
+                    [0, 0, self.initial_mover_zpos + self.mover_size[mover_idx, 2] if self.mover_size.ndim == 2 else self.mover_size[2]]
                 ),
                 quat_d=np.array([1, 0, 0, 0]),
             )
@@ -1070,7 +1084,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             info_dict['object_geoms'] = self._geoms(name='object')
             object_geoms = info_dict['object_geoms'][np.newaxis]
 
-        goal_reached, _ = self._is_goal_reached(achieved_goal[np.newaxis], desired_goal[np.newaxis], object_geoms)
+        goal_reached, dist_goal_or_coverage = self._is_goal_reached(achieved_goal[np.newaxis], desired_goal[np.newaxis], object_geoms)
         if isinstance(goal_reached, np.ndarray):
             assert goal_reached.shape == (1,)
             goal_reached = goal_reached[0]
@@ -1083,6 +1097,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                 'num_overshoot_corrections': self.get_current_num_overshoot_corrections(),
                 'num_distance_corrections': self.get_current_num_distance_corrections(),
                 'time_to_success_s': self.time_to_success_s,
+                'goal_metric': dist_goal_or_coverage,
             }
         )
 
@@ -1093,7 +1108,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         super().close()
 
     def ensure_max_dyn_val(self, current_values: np.ndarray, max_value: float, next_derivs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Ensure the minimum and maximum dynamic values.
+        """Ensure the minimum and maximum dynamic values per cycle.
 
         :param current_values: the current velocity or acceleration specified as a numpy array of shape (2,) or
             (num_checks,2)
