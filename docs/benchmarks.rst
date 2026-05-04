@@ -165,6 +165,29 @@ number of movers and tile configurations.
      - (8, 8)
      - 5
 
+Simulation Performance
+======================
+
+The plot below shows the process time per simulation step as a function of environment size,
+measured across 100 runs for each configuration on a single CPU core.  Two collision-shape
+modes are shown: **circle** (fast closed-form distance check) and **box** (rotated rectangle
+check via separating-axis theorem).
+
+Mover-mover collision detection uses a tile-grid spatial hash, so only pairs whose tiles fall
+within the interaction neighbourhood are tested.  This reduces the pair count from O(n²) to
+O(n·k), where k is the mean number of movers per neighbourhood cell.  Wall collision checks
+benefit from a precomputed per-tile wall-segment lookup table that avoids iterating over the
+full wall list on every step.  Together these optimisations keep the step time well below
+1 ms for up to 500 movers.
+
+.. image:: _static/plot_scalability.svg
+   :alt: Process time per simulation step vs. number of movers, for circle and box collision shapes
+   :align: center
+   :width: 100%
+
+The x-axis labels show the number of movers together with the corresponding tile-grid size
+(e.g. *50 / 10×10*).  Shaded bands indicate ±1 standard deviation.
+
 Latest Results
 ==============
 .. toctree::
