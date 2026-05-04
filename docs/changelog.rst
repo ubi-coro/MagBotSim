@@ -10,7 +10,7 @@ General
 
 Performance
 ^^^^^^^^^^^
-1. Add spatial hashing for mover-mover collision detection, reducing pair count from O(n^2) to O(n*k).
+1. Add spatial hashing for mover-mover collision detection.
 2. Precompute per-tile wall-segment lookup table for wall collision checks.
 3. Add fast paths for uniform mover sizes and complete tile layouts in ``qpos_is_valid``.
 4. Cache episode-level Shapely polygons in ``StateBasedGlobalPushingEnv`` to avoid rebuilding them on every step.
