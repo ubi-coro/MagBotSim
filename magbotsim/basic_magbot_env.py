@@ -480,12 +480,13 @@ class BasicMagBotEnv:
     ) -> tuple[np.ndarray, np.ndarray]:
         """Return candidate mover-pair indices using the tile grid as a spatial hash.
 
-        Instead of the O(n^2) all-pairs approach, each mover is assigned to the tile its centre
-        falls in via the same floor-division used in :meth:`qpos_is_valid`, and only pairs
-        whose tiles lie within the interaction neighbourhood are returned.  This reduces pair
-        count from O(n^2) to O(n * k) where k is the mean number of movers in the neighbourhood.
+        Instead of the O(n^2) all-pairs approach (where n is the number of movers), each mover
+        is assigned to the tile its centre falls in via the same floor-division used in
+        :meth:`qpos_is_valid`, and only pairs whose tiles lie within the interaction neighbourhood
+        are returned.  This reduces pair count from O(n^2) to O(n * k) where k is the mean number
+        of movers in the neighbourhood.
 
-        :param qpos_xy: (n, 2) array of mover (x, y) positions.
+        :param qpos_xy: (n, 2) array of mover (x, y) positions (n = number of movers).
         :param max_interaction_dist: conservative upper bound on the centre-to-centre
             distance at which two movers can possibly collide.
         :return: ``(i_idx, j_idx)`` flat arrays of mover indices such that every entry
@@ -738,7 +739,7 @@ class BasicMagBotEnv:
         closed form using the standard point-to-segment projection formula, vectorised over
         the (num_movers, max_walls) pair space.
 
-        :param centers: (n, 2) circle centres
+        :param centers: (n, 2) circle centres, where n is the number of movers
         :param radii: (n, 1) circle radii
         :param walls: (n, max_walls, 4) wall segments as (x1, y1, x2, y2)
         :param n_walls: (n,) number of valid wall entries per mover (remainder are padding)
@@ -776,7 +777,7 @@ class BasicMagBotEnv:
     ) -> np.ndarray:
         """Return True for each mover whose rotated box intersects at least one wall segment.
 
-        :param qpos: (n, 7) box positions and quaternions (x, y, z, w, qx, qy, qz)
+        :param qpos: (n, 7) box positions and quaternions (x, y, z, w, qx, qy, qz), where n is the number of movers
         :param sizes: (n, 2) box half-sizes (hx, hy)
         :param walls: (n, max_walls, 4) wall segments as (x1, y1, x2, y2)
         :param n_walls: (n,) number of valid wall entries per mover
