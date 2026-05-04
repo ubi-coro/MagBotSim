@@ -1009,7 +1009,13 @@ class BasicMagBotEnv:
         self._mover_z_adj = self._build_mover_z_adj()
 
     def _build_mover_z_adj(self) -> np.ndarray:
-        """Return a (num_movers,) array of z offsets to subtract from raw qpos z values."""
+        """Precompute per-mover z-position adjustments.
+
+        :return: float64 array of shape (num_movers,) where entry ``i`` is the z offset
+            to subtract from the raw qpos z of mover ``i`` (ordered consistently with
+            ``self.mover_names``). For box/mesh movers this is ``size[2]``; for cylinder
+            movers it is ``size[1]``; for any other shape it is ``0``.
+        """
         if isinstance(self.mover_shape, list):
             shapes = np.array(self.mover_shape)
         else:
