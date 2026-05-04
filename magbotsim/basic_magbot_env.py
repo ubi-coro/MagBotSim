@@ -935,20 +935,7 @@ class BasicMagBotEnv:
             mover_indices = np.array([self.mover_name_to_idx[mover_name] for mover_name in mover_names], dtype=np.int32)
             mover_qpos = self.data.qpos[self.mover_qpos_indices[mover_indices, :]]
 
-            if isinstance(self.mover_shape, list):
-                shapes = np.array(self.mover_shape)[mover_indices]
-            else:
-                shapes = np.array([self.mover_shape] * mover_qpos.shape[0])
-
-            if len(self.mover_size.shape) == 2:
-                sizes = self.mover_size[mover_indices, :]
-            else:
-                sizes = np.broadcast_to(self.mover_size, (mover_qpos.shape[0], self.mover_size.shape[0]))
-
-            mask_box_mesh = np.bitwise_or(shapes == 'box', shapes == 'mesh')
-            mask_cylinder = shapes == 'cylinder'
-            mover_qpos[mask_box_mesh, 2] -= sizes[mask_box_mesh, 2]
-            mover_qpos[mask_cylinder, 2] -= sizes[mask_cylinder, 1]
+            mover_qpos[:, 2] -= self._mover_z_adj[mover_indices]
 
         if add_noise:
             mover_qpos += self.rng_noise.normal(loc=0.0, scale=self.std_noise[0], size=mover_qpos.shape)
