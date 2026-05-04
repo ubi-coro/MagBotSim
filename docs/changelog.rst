@@ -1,12 +1,20 @@
 Changelog
 =========
 
-Pre-Release v1.0.4a0 (2026-04-29)
+Pre-Release v1.0.4a1 (2026-04-29)
 ---------------------------------
 
 General
 ^^^^^^^
 1. The ``_step_callback`` of the ``BasicMagBotSingleAgentEnv`` now returns the possibly modified action instead of None.
+
+Performance
+^^^^^^^^^^^
+1. Add spatial hashing for mover-mover collision detection, reducing pair count from O(n^2) to O(n*k).
+2. Precompute per-tile wall-segment lookup table for wall collision checks.
+3. Add fast paths for uniform mover sizes and complete tile layouts in ``qpos_is_valid``.
+4. Cache episode-level Shapely polygons in ``StateBasedGlobalPushingEnv`` to avoid rebuilding them on every step.
+5. Remove ``scipy`` dependency and optimize rectangle vertex calculation in ``geometry_2D_utils``.
 
 Bug Fixes
 ^^^^^^^^^
@@ -19,7 +27,7 @@ Release v1.0.3 (2026-03-25)
 
 General
 ^^^^^^^
-1. Fix bug in ``StateBasedGlobalPushingEnv-v0`` 
+1. Fix bug in ``StateBasedGlobalPushingEnv-v0``
 2. Update RL examples
 
 Release v1.0.2 (2026-02-27)
