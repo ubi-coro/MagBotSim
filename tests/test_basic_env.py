@@ -10,6 +10,164 @@ from magbotsim import BasicMagBotEnv
 
 
 @pytest.mark.parametrize(
+    'num_movers, mover_params, error_expected, expected_message',
+    [
+        (
+            1,
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': 'beckhoff_apm4220_bumper'},
+                'mass': 0.639 - 0.034,
+                'bumper_mass': 0.034,
+            },
+            False,
+            '',
+        ),
+        (
+            1,
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': None},
+                'mass': 0.639,
+                'bumper_mass': 0.0,
+            },
+            False,
+            '',
+        ),
+        (
+            1,
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': None},
+                'mass': 0.639,
+            },
+            False,
+            '',
+        ),
+        (
+            2,
+            {
+                'shape': 'mesh',
+                'mesh': {
+                    'mover_stl_path': ['beckhoff_apm4220_mover', 'beckhoff_apm4220_mover'],
+                    'bumper_stl_path': ['beckhoff_apm4220_bumper', 'beckhoff_apm4220_bumper'],
+                },
+                'mass': 0.639 - 0.034,
+                'bumper_mass': 0.034,
+            },
+            False,
+            '',
+        ),
+        (
+            2,
+            {
+                'shape': 'mesh',
+                'mesh': {
+                    'mover_stl_path': ['beckhoff_apm4220_mover', 'beckhoff_apm4330_mover'],
+                    'bumper_stl_path': ['beckhoff_apm4220_bumper', 'beckhoff_apm4330_bumper'],
+                },
+                'mass': np.array([0.639 - 0.034, 1.264 - 0.05]),
+                'bumper_mass': np.array([0.034, 0.05]),
+            },
+            False,
+            '',
+        ),
+        (
+            1,
+            {
+                'shape': 'mesh',
+                'mesh': {},
+                'mass': 0.639 - 0.034,
+                'bumper_mass': 0.034,
+            },
+            True,
+            "Mover shape is 'mesh', but no mover mesh file is specified.",
+        ),
+        (
+            1,
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': None},
+                'mass': 0.639 - 0.034,
+                'bumper_mass': 0.034,
+            },
+            True,
+            'Mover bumper mass is != 0, but no mover bumper mesh file is specified, i.e. no bumper is used.',
+        ),
+        (
+            1,
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': None},
+                'mass': 0.639 - 0.034,
+                'bumper_mass': -0.034,
+            },
+            True,
+            'Mover bumper mass is != 0, but no mover bumper mesh file is specified, i.e. no bumper is used.',
+        ),
+        (
+            1,
+            {
+                'shape': 'box',
+                'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]),
+                'mass': 0.639,
+                'bumper_mass': 0.034,
+            },
+            True,
+            'Mover bumper mass is != 0, but no mover bumper mesh file is specified, i.e. no bumper is used.',
+        ),
+        (
+            1,
+            {
+                'shape': 'box',
+                'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]),
+                'mass': 0.639,
+                'bumper_mass': -0.034,
+            },
+            True,
+            'Mover bumper mass is != 0, but no mover bumper mesh file is specified, i.e. no bumper is used.',
+        ),
+        (1, {'shape': 'box', 'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': 0.639, 'bumper_mass': 0.0}, False, ''),
+        (
+            1,
+            {
+                'shape': 'box',
+                'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]),
+                'mass': 0.639,
+            },
+            False,
+            '',
+        ),
+    ],
+)
+def test_bumper_config(num_movers, mover_params, error_expected, expected_message):
+    collision_params = {
+        'shape': 'circle',
+        'size': 0.8,
+        'offset': 0.0,
+        'offset_wall': 0.0,
+    }
+    if error_expected:
+        with pytest.raises(AssertionError, match=expected_message):
+            env = BasicMagBotEnv(
+                layout_tiles=np.ones((4, 4)),
+                num_movers=num_movers,
+                mover_params=mover_params,
+                initial_mover_zpos=0.001,
+                collision_params=collision_params,
+            )
+    else:
+        env = BasicMagBotEnv(
+            layout_tiles=np.ones((4, 4)),
+            num_movers=num_movers,
+            mover_params=mover_params,
+            initial_mover_zpos=0.001,
+            collision_params=collision_params,
+        )
+        mujoco.mj_step(env.model, env.data, nstep=1)
+
+
+@pytest.mark.parametrize(
     'mover_params, initial_mover_zpos',
     [
         # shape box

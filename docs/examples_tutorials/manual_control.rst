@@ -48,11 +48,11 @@ Here is a complete example showing how to set up manual control for a single mov
             mover_params={
                 'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]),
                 'mass': 0.63 - 0.1,
+                'bumper_mass': 0.1,
                 'shape': 'mesh',
                 'mesh': {
                     'mover_stl_path': 'beckhoff_apm4220_mover',
                     'bumper_stl_path': 'beckhoff_apm4220_bumper',
-                    'bumper_mass': 0.1,
                 },
             },
             num_movers=1,

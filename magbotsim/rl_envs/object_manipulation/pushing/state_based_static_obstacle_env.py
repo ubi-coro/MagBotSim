@@ -133,7 +133,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         # obstacles
         self.obstacle_mode = obstacle_mode
         self.valid_obstacle_modes = ['simple', 'medium', 'hard', 'curriculum', 'random']
-        assert self.obstacle_mode in self.valid_obstacle_modes, f"Unkown obstacle mode: '{self.obstacle_mode}'"
+        assert self.obstacle_mode in self.valid_obstacle_modes, logger.error(f"Unkown obstacle mode: '{self.obstacle_mode}'")
         self.tmp_obstacle_mode = 'simple'  # curriculum learning
         self.ep_counter = 0  # curriculum learning
         self.cl_num_ep_before_incr = 800  # curriculum
@@ -366,13 +366,16 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
             mover_actuator_list = ['\n\t<actuator>', '\t\t<!-- mover actuators -->']
 
             joint_name = self.mover_joint_names[self.idx_mover]
+            mover_body_id = self.model.joint(joint_name).bodyid[0]
+            mover_mass = self.model.body(mover_body_id).subtreemass[0]
+
             if self.learn_jerk:
                 mover_actuator_list.extend(
                     [
                         f'\t\t<general name="mover_actuator_x_{self.idx_mover}" joint="{joint_name}" gear="1 0 0 0 0 0" '
-                        f'dyntype="integrator" gaintype="fixed" gainprm="{self.mover_mass} 0 0" biastype="none" actearly="true"/>',
+                        f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
                         f'\t\t<general name="mover_actuator_y_{self.idx_mover}" joint="{joint_name}" gear="0 1 0 0 0 0" '
-                        f'dyntype="integrator" gaintype="fixed" gainprm="{self.mover_mass} 0 0" biastype="none" actearly="true"/>',
+                        f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
                     ]
                 )
             else:
@@ -380,9 +383,9 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
                 mover_actuator_list.extend(
                     [
                         f'\t\t<general name="mover_actuator_x_{self.idx_mover}" joint="{joint_name}" gear="1 0 0 0 0 0" dyntype="none"'
-                        f' gaintype="fixed" gainprm="{self.mover_mass} 0 0" biastype="none"/>',
+                        f' gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
                         f'\t\t<general name="mover_actuator_y_{self.idx_mover}" joint="{joint_name}" gear="0 1 0 0 0 0" '
-                        f'dyntype="none" gaintype="fixed" gainprm="{self.mover_mass} 0 0" biastype="none"/>',
+                        f'dyntype="none" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
                     ]
                 )
 
@@ -534,13 +537,31 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         self.num_elapsed_cycles = 0
         self.success_counter = 0
 
+    def _step_callback(self, action):
+        """Ensures the maximum dynamics of the actions (accelerations or jerks).
+
+        :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
+        :return: the possibly modified action (shape: (num_movers,2))
+        """
+        action = action.reshape((self.num_movers, 2))
+
+        # ensure maximum acceleration or jerk
+        max_action_dyn = self.j_max if self.learn_jerk else self.a_max
+        action_norm_tmp = np.linalg.norm(action, ord=2, axis=1)
+        action_norm = np.where(action_norm_tmp <= max_action_dyn, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, max_action_dyn)
+        action = np.divide(action, action_norm) * action_max_vals
+
+        return action
+
     def _before_mujoco_step_callback(self, action: np.ndarray) -> None:
         """Apply the next action, i.e. it sets the jerk or acceleration, ensuring the minimum and maximum velocity and acceleration
         (for one cycle).
 
         :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
         """
-        action = action.reshape((self.num_movers, 2))
+        if action.shape != (self.num_movers, 2):
+            action = action.reshape((self.num_movers, 2))
 
         vel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)[:, :2]
         if self.learn_jerk:
@@ -789,7 +810,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         super().close()
 
     def ensure_max_dyn_val(self, current_values: np.ndarray, max_value: float, next_derivs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Ensure the minimum and maximum dynamic values.
+        """Ensure the minimum and maximum dynamic values per cycle.
 
         :param current_values: the current velocity or acceleration specified as a numpy array of shape (2,) or (num_checks,2)
         :param max_value: the maximum velocity or acceleration (float)

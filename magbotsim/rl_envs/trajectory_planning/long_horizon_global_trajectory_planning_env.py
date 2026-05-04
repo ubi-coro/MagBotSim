@@ -303,45 +303,47 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         :param custom_model_xml_strings: the current ``custom_model_xml_strings``-dict which is modified by this callback
         :return: the modified ``custom_model_xml_strings``-dict
         """
-        mover_actuator_list = ['\n\t<actuator>', '\t\t<!-- mover actuators -->']
-        for idx_mover in range(0, self.num_movers):
-            joint_name = f'mover_joint_{idx_mover}'
-            mover_mass = self.mover_mass if isinstance(self.mover_mass, float) else self.mover_mass[idx_mover]
+        if self.impedance_controllers is not None:
+            mover_actuator_list = ['\n\t<actuator>', '\t\t<!-- mover actuators -->']
+            for idx_mover in range(0, self.num_movers):
+                joint_name = self.mover_joint_names[idx_mover]
+                mover_body_id = self.model.joint(joint_name).bodyid[0]
+                mover_mass = self.model.body(mover_body_id).subtreemass[0]
 
-            if self.learn_jerk:
-                mover_actuator_list.extend(
-                    [
-                        f'\t\t<general name="mover_actuator_x_{idx_mover}" joint="{joint_name}" gear="1 0 0 0 0 0" '
-                        f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
-                        f'\t\t<general name="mover_actuator_y_{idx_mover}" joint="{joint_name}" gear="0 1 0 0 0 0" '
-                        f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
-                    ]
-                )
-            else:
-                # learn acceleration
-                mover_actuator_list.extend(
-                    [
-                        f'\t\t<general name="mover_actuator_x_{idx_mover}" joint="{joint_name}" gear="1 0 0 0 0 0" dyntype="none" '
-                        f'gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
-                        f'\t\t<general name="mover_actuator_y_{idx_mover}" joint="{joint_name}" gear="0 1 0 0 0 0" dyntype="none" '
-                        f'gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
-                    ]
-                )
-            if self.impedance_controllers is not None:
+                if self.learn_jerk:
+                    mover_actuator_list.extend(
+                        [
+                            f'\t\t<general name="mover_actuator_x_{idx_mover}" joint="{joint_name}" gear="1 0 0 0 0 0" '
+                            f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
+                            f'\t\t<general name="mover_actuator_y_{idx_mover}" joint="{joint_name}" gear="0 1 0 0 0 0" '
+                            f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
+                        ]
+                    )
+                else:
+                    # learn acceleration
+                    mover_actuator_list.extend(
+                        [
+                            f'\t\t<general name="mover_actuator_x_{idx_mover}" joint="{joint_name}" gear="1 0 0 0 0 0" dyntype="none" '
+                            f'gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
+                            f'\t\t<general name="mover_actuator_y_{idx_mover}" joint="{joint_name}" gear="0 1 0 0 0 0" dyntype="none" '
+                            f'gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
+                        ]
+                    )
+
                 impedance_controller = self.impedance_controllers[idx_mover]
                 mover_actuator_list.append(impedance_controller.generate_actuator_xml_string(idx_mover=idx_mover))
 
-        mover_actuator_list.append('\t</actuator>')
+            mover_actuator_list.append('\t</actuator>')
 
-        if custom_model_xml_strings is None:
-            custom_model_xml_strings = {}
-        custom_outworldbody_xml_str = custom_model_xml_strings.get('custom_outworldbody_xml_str', None)
-        mover_actuator_xml_str = '\n'.join(mover_actuator_list)
-        if custom_outworldbody_xml_str is not None:
-            custom_outworldbody_xml_str += mover_actuator_xml_str
-        else:
-            custom_outworldbody_xml_str = mover_actuator_xml_str
-        custom_model_xml_strings['custom_outworldbody_xml_str'] = custom_outworldbody_xml_str
+            if custom_model_xml_strings is None:
+                custom_model_xml_strings = {}
+            custom_outworldbody_xml_str = custom_model_xml_strings.get('custom_outworldbody_xml_str', None)
+            mover_actuator_xml_str = '\n'.join(mover_actuator_list)
+            if custom_outworldbody_xml_str is not None:
+                custom_outworldbody_xml_str += mover_actuator_xml_str
+            else:
+                custom_outworldbody_xml_str = mover_actuator_xml_str
+            custom_model_xml_strings['custom_outworldbody_xml_str'] = custom_outworldbody_xml_str
 
         return custom_model_xml_strings
 
@@ -432,13 +434,31 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         # reload model with new start pos and goal pos
         self.reload_model(mover_start_xy_pos=start_qpos[:, :2], mover_goal_xy_pos=self.goals)
 
+    def _step_callback(self, action):
+        """Ensures the maximum dynamics of the actions (accelerations or jerks).
+
+        :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
+        :return: the possibly modified action (shape: (num_movers,2))
+        """
+        action = action.reshape((self.num_movers, 2))
+
+        # ensure maximum acceleration or jerk
+        max_action_dyn = self.j_max if self.learn_jerk else self.a_max
+        action_norm_tmp = np.linalg.norm(action, ord=2, axis=1)
+        action_norm = np.where(action_norm_tmp <= max_action_dyn, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, max_action_dyn)
+        action = np.divide(action, action_norm) * action_max_vals
+
+        return action
+
     def _before_mujoco_step_callback(self, action: np.ndarray) -> None:
         """Apply the next action, i.e. it sets the jerk or acceleration, ensuring the minimum and maximum velocity and acceleration
         (for one cycle).
 
         :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
         """
-        action = action.reshape((self.num_movers, 2))
+        if action.shape != (self.num_movers, 2):
+            action = action.reshape((self.num_movers, 2))
 
         vel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)[:, :2]
         if self.learn_jerk:
@@ -761,7 +781,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         max_value: float,
         next_derivs: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Ensure the minimum and maximum dynamic values.
+        """Ensure the minimum and maximum dynamic values per cycle.
 
         :param current_values: the current velocity or acceleration specified as a numpy array of shape (2,) or
             (num_checks,2)

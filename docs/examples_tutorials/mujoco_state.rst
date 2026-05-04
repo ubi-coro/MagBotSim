@@ -26,11 +26,11 @@ it later:
         layout_tiles=np.ones((4, 3)),
         mover_params={
             'mass': 0.639 - 0.034,
+            'bumper_mass': 0.034,
             'shape': 'mesh',
             'mesh': {
                 'mover_stl_path': 'beckhoff_apm4220_mover',
                 'bumper_stl_path': 'beckhoff_apm4220_bumper',
-                'bumper_mass': 0.034,
             },
         },
         num_movers=1,

@@ -35,9 +35,9 @@ mesh, you must explicitly set it to ``None``, otherwise the default
             'mesh': {
                 'mover_stl_path': 'beckhoff_apm4220_mover',
                 'bumper_stl_path': 'beckhoff_apm4220_bumper',
-                'mass': 0.639 - 0.034, # mover mass (including bumper) - bumper mass
-                'bumper_mass': 0.034,
             }
+            'mass': 0.639 - 0.034, # mover mass (including bumper) - bumper mass
+            'bumper_mass': 0.034,
         },
         num_movers=1,
         render_mode='human',

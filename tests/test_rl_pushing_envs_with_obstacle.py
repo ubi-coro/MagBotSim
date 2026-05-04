@@ -22,6 +22,18 @@ from magbotsim.rl_envs.object_manipulation.pushing.state_based_static_obstacle_e
         (1.237, 100, 42, True, True),
         (0.628, -100, 42, True, True),
         (1.237, -100, 42, True, True),
+        (0.628, 150, 1, True, True),
+        (0.628, 150, 1, True, False),
+        (0.628, 150, 1, False, True),
+        (1.237, 150, 1, True, True),
+        (0.628, -150, 1, True, True),
+        (0.628, -150, 1, True, False),
+        (0.628, -150, 1, False, True),
+        (1.237, -150, 1, True, True),
+        (0.628, 150, 42, True, True),
+        (1.237, 150, 42, True, True),
+        (0.628, -150, 42, True, True),
+        (1.237, -150, 42, True, True),
     ],
 )
 def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
@@ -78,13 +90,14 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
 
     for step in range(0, num_steps):
         if test_x and test_y:
-            jerk_arr = np.array([jerk / 2, jerk / 2])
+            jerk_arr = np.array([jerk, jerk])
         elif test_x and not test_y:
             jerk_arr = np.array([jerk, 0])
         elif not test_x and test_y:
             jerk_arr = np.array([0, jerk])
         else:
             jerk_arr = np.array([0, 0])
+        jerk_arr_step = jerk_arr.copy()
 
         if step > 0:
             v = velo_mj_manual[step - 1, :2].copy()
@@ -96,7 +109,12 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
             a = np.zeros(2)
 
         for _ in range(0, dt):
-            next_j = jerk_arr.copy()
+            next_j = jerk_arr.reshape((env.num_movers, 2))
+            # ensure maximum jerk
+            action_norm_tmp = np.linalg.norm(next_j, ord=2, axis=1)
+            action_norm = np.where(action_norm_tmp <= env.j_max, 1.0, action_norm_tmp)[:, None]
+            action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max)
+            next_j = np.divide(next_j, action_norm) * action_max_vals
 
             next_a, _ = env.ensure_max_dyn_val(a, env.a_max, next_j)
             v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a)
@@ -105,7 +123,7 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
             p = timestep * v + p
 
         # set jerk in env
-        env.step(action=jerk_arr)
+        env.step(action=jerk_arr_step)
 
         pos_mj_manual[step, :2] = p.flatten().copy()
         velo_mj_manual[step, :2] = v.flatten().copy()
@@ -120,6 +138,8 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
         norm_acc = np.linalg.norm(acc_mj_actuator[step, :], ord=2)
         assert np.allclose(norm_velo, env.v_max) or norm_velo < env.v_max
         assert np.allclose(norm_acc, env.a_max) or norm_acc < env.a_max
+
+    env.close()
 
     assert np.allclose(pos_mj_manual, pos_mj_actuator)
     assert np.allclose(velo_mj_manual, velo_mj_actuator)
@@ -141,6 +161,18 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
         (1.237, 0.15, 42, True, True),
         (0.628, -0.15, 42, True, True),
         (1.237, -0.15, 42, True, True),
+        (0.628, 0.2, 1, True, True),
+        (0.628, 0.2, 1, True, False),
+        (0.628, 0.2, 1, False, True),
+        (1.237, 0.2, 1, True, True),
+        (0.628, -0.2, 1, True, True),
+        (0.628, -0.2, 1, True, False),
+        (0.628, -0.2, 1, False, True),
+        (1.237, -0.2, 1, True, True),
+        (0.628, 0.2, 42, True, True),
+        (1.237, 0.2, 42, True, True),
+        (0.628, -0.2, 42, True, True),
+        (1.237, -0.2, 42, True, True),
     ],
 )
 def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
@@ -198,13 +230,14 @@ def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
 
     for step in range(0, num_steps):
         if test_x and test_y:
-            acc_arr = np.array([acc / 2, acc / 2])
+            acc_arr = np.array([acc, acc])
         elif test_x and not test_y:
             acc_arr = np.array([acc, 0])
         elif not test_x and test_y:
             acc_arr = np.array([0, acc])
         else:
             acc_arr = np.array([0, 0])
+        acc_arr_step = acc_arr.copy()
 
         if step > 0:
             v = velo_mj_manual[step - 1, :2].copy()
@@ -216,14 +249,20 @@ def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
             a = np.zeros(2)
 
         for _ in range(0, dt):
-            next_a = acc_arr.copy()
+            next_a = acc_arr.reshape((env.num_movers, 2))
+            # ensure maximum acceleration
+            action_norm_tmp = np.linalg.norm(next_a, ord=2, axis=1)
+            action_norm = np.where(action_norm_tmp <= a_max, 1.0, action_norm_tmp)[:, None]
+            action_max_vals = np.where(action_norm == 1.0, 1.0, a_max)
+            next_a = np.divide(next_a, action_norm) * action_max_vals
+
             v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a)
 
             a = a_tmp.copy()
             p = timestep * v + p
 
         # set acc in env
-        env.step(action=acc_arr)
+        env.step(action=acc_arr_step)
 
         pos_mj_manual[step, :2] = p.flatten().copy()
         velo_mj_manual[step, :2] = v.flatten().copy()
@@ -238,6 +277,8 @@ def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
         norm_acc = np.linalg.norm(acc_mj_actuator[step, :], ord=2)
         assert np.allclose(norm_velo, env.v_max) or norm_velo < env.v_max
         assert np.allclose(norm_acc, env.a_max) or norm_acc < env.a_max
+
+    env.close()
 
     assert np.allclose(pos_mj_manual, pos_mj_actuator)
     assert np.allclose(velo_mj_manual, velo_mj_actuator)
