@@ -162,6 +162,14 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.object_start_yaw = 0.0
         self.object_goal_yaw = 0.0
 
+        # Episode-level Shapely cache (learn_pose=True only).
+        # Both the object shape and the desired-goal pose are fixed for the duration
+        # of an episode, so we build these polygons once in _reset_callback and reuse
+        # them every step instead of rebuilding from scratch each time.
+        self._episode_base_poly: sg.MultiPolygon | None = None
+        self._episode_goal_poly: sg.MultiPolygon | None = None
+        self._episode_desired_goal: np.ndarray | None = None
+
         self.object_sliding_friction = object_sliding_friction
         self.object_torsional_friction = object_torsional_friction
 
@@ -670,6 +678,21 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         # reload model with new start pos and goal pos
         self.reload_model(mover_start_xy_pos=start_qpos[:, :2])
 
+        if self.learn_pose:
+            episode_geoms = self._geoms(name='object')
+            self._episode_base_poly = sg.MultiPolygon(
+                [self._geom_to_shapely(episode_geoms[i]) for i in range(episode_geoms.shape[0]) if episode_geoms[i].any()]
+            )
+            self._episode_desired_goal = np.array(
+                [
+                    self.object_xy_goal_pos[0],
+                    self.object_xy_goal_pos[1],
+                    np.sin(self.object_goal_yaw),
+                    np.cos(self.object_goal_yaw),
+                ]
+            )
+            self._episode_goal_poly = self._pose_poly(self._episode_base_poly, self._episode_desired_goal)
+
         # reset corrective movement measurement
         self.cm_measurement.reset()
 
@@ -843,12 +866,22 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         :param body_name: the name of the MuJoCo body to convert
         :return: a Shapely Polygon representing the union of all geometries in the body
         """
+        base_poly = sg.MultiPolygon([self._geom_to_shapely(geoms[i]) for i in range(geoms.shape[0]) if geoms[i].any()])
+        return self._pose_poly(base_poly, pose)
+
+    def _pose_poly(self, base_poly: sg.MultiPolygon, pose: np.ndarray) -> sg.MultiPolygon:
+        """Apply a pose transformation to a base polygon.
+
+        :param base_poly: MultiPolygon in the body's local frame (as returned by _body_to_shapely)
+        :param pose: a numpy array containing [x, y, sin_yaw, cos_yaw]
+        :return: the base polygon rotated and translated to the given world pose
+        """
         x, y, sin_yaw, cos_yaw = pose.squeeze()
         yaw = np.arctan2(sin_yaw, cos_yaw)
 
         return shapely.affinity.translate(
             shapely.affinity.rotate(
-                sg.MultiPolygon([self._geom_to_shapely(geoms[i]) for i in range(geoms.shape[0]) if geoms[i].any()]),
+                base_poly,
                 yaw,
                 origin='center',
                 use_radians=True,
@@ -873,6 +906,31 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         :param object_geoms: a numpy array containing geometry data for the object
         :return: the coverage ratio between 0.0 and 1.0, where 1.0 means perfect overlap
         """
+        # Fast path for single-step calls within the current episode.
+        #
+        # Both the object's base shape (geoms) and the desired-goal polygon are
+        # episode-constant.  When this method is called with the episode's own goal
+        # (batch_size == 1 and desired_goal matches the cached value) we can skip all
+        # _geom_to_shapely construction and the full goal-polygon build entirely.
+        #
+        # HER compute_reward calls pass varied desired_goals (and potentially geoms
+        # from past episodes), so they fall through to the general path below.
+        if (
+            self._episode_base_poly is not None
+            and achieved_goal.shape[0] == 1
+            and np.array_equal(desired_goal[0], self._episode_desired_goal)
+        ):
+            object_poly = self._pose_poly(self._episode_base_poly, achieved_goal[0])
+            return np.array(
+                [
+                    np.clip(
+                        self._episode_goal_poly.intersection(object_poly).area / self._episode_goal_poly.area,
+                        0,
+                        1,
+                    )
+                ]
+            )
+
         object_polys = [self._body_to_shapely(geoms, pose) for geoms, pose in zip(object_geoms, achieved_goal, strict=True)]
         goal_polys = [self._body_to_shapely(geoms, pose) for geoms, pose in zip(object_geoms, desired_goal, strict=True)]
 

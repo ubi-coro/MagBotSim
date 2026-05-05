@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "magbotsim"
 description = "Magentic robotics simulation including reinforcement learning environments based on MuJoCo"
 readme = "README.md"
-requires-python = ">= 3.11, <3.14"
+requires-python = ">= 3.11, <3.15"
 authors = [{ name = "Lara Bergmann", email = "lara.bergmann@uni-bielefeld.de" }]
 keywords = ["Magnetic Robotics", "Reinforcement Learning", "Gymnasium", "PettingZoo", "RL", "AI", "Robotics", "Magnetic Levitation"]
 classifiers = [
@@ -15,6 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     'Intended Audience :: Science/Research',
     'Topic :: Scientific/Engineering :: Artificial Intelligence',
 ]

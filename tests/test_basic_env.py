@@ -2,10 +2,11 @@
 # Copyright (c) 2024 Lara Bergmann, Bielefeld University #
 ##########################################################
 
-import pytest
-import numpy as np
-from magbotsim import BasicMagBotEnv
 import mujoco
+import numpy as np
+import pytest
+
+from magbotsim import BasicMagBotEnv
 
 
 @pytest.mark.parametrize(
@@ -349,6 +350,64 @@ def test_initial_mover_zpos(mover_params, initial_mover_zpos):
     mover_qpos = env.get_mover_qpos(mover_names=env.mover_names, add_noise=False)
     assert mover_qpos.shape == (env.num_movers, 7)
     assert np.allclose(mover_qpos[:, 2], initial_mover_zpos)
+
+
+@pytest.mark.parametrize(
+    'mover_params, initial_mover_zpos',
+    [
+        # shape box
+        ({'shape': 'box', 'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': 0.63}, 0.001),
+        ({'shape': 'box', 'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': 0.63}, 0.004),
+        # shape cylinder
+        ({'shape': 'cylinder', 'size': np.array([0.113 / 2, 0.012 / 2, 0.01]), 'mass': 0.639}, 0.001),
+        ({'shape': 'cylinder', 'size': np.array([0.113 / 2, 0.012 / 2, 0.01]), 'mass': 0.639}, 0.004),
+        # shape mesh
+        (
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': 'beckhoff_apm4220_bumper'},
+                'mass': 0.639 - 0.034,
+                'bumper_mass': 0.034,
+            },
+            0.001,
+        ),
+        (
+            {
+                'shape': 'mesh',
+                'mesh': {'mover_stl_path': 'beckhoff_apm4220_mover', 'bumper_stl_path': 'beckhoff_apm4220_bumper'},
+                'mass': 0.639 - 0.034,
+                'bumper_mass': 0.034,
+            },
+            0.004,
+        ),
+    ],
+)
+def test_initial_mover_zpos_slow_path(mover_params, initial_mover_zpos):
+    """get_mover_qpos should apply the z adjustment correctly when called with a subset of mover
+    names (slow path), not just when called with the full env.mover_names list (fast path).
+    """
+    collision_params = {
+        'shape': 'circle',
+        'size': 0.8,
+        'offset': 0.0,
+        'offset_wall': 0.0,
+    }
+    env = BasicMagBotEnv(
+        layout_tiles=np.ones((4, 4)),
+        num_movers=2,
+        mover_params=mover_params,
+        initial_mover_zpos=initial_mover_zpos,
+        collision_params=collision_params,
+    )
+    mujoco.mj_step(env.model, env.data, nstep=1)
+
+    # Pass a list (not the identity env.mover_names) to force the slow path for each mover
+    for mover_name in env.mover_names:
+        mover_qpos = env.get_mover_qpos(mover_names=[mover_name], add_noise=False)
+        assert mover_qpos.shape == (1, 7)
+        assert np.isclose(mover_qpos[0, 2], initial_mover_zpos), (
+            f'z adjustment incorrect for mover {mover_name!r}: expected {initial_mover_zpos}, got {mover_qpos[0, 2]}'
+        )
 
 
 @pytest.mark.parametrize(

@@ -96,9 +96,9 @@ class EnergyEfficiencyMeasurement:
     """A utility class to measure energy efficiency :math:`W` based on weighted sum of jerk, acceleration, and velocity.
 
     .. math::
-        W = \sum_{m=0}^{M} w_j\cdot |j(m,t)| + w_a\cdot |a(m,t)| + w_v \cdot |v(m,t)|,
+        W = \\sum_{m=0}^{M} w_j\\cdot |j(m,t)| + w_a\\cdot |a(m,t)| + w_v \\cdot |v(m,t)|,
 
-    where :math:`w_j, w_a, w_v \in\mathbb{R}` are the weights and :math:`M\in\mathbb{N}` is the number of movers for which
+    where :math:`w_j, w_a, w_v \\in\\mathbb{R}` are the weights and :math:`M\\in\\mathbb{N}` is the number of movers for which
     to measure the energy efficiency.
 
     This class computes a weighted sum of the absolute values of jerk, acceleration, and velocity for all movers

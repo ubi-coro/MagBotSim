@@ -228,6 +228,8 @@ class BasicMagBotEnv:
         self.idx_x_tiles_2x2_tr, self.idx_y_tiles_2x2_tr = self.get_tile_indices_mask(mask=mask_2x2_tr)
         # padded layout used for wall collision check
         self.layout_tiles_wc = np.pad(layout_tiles, ((0, 1), (0, 1)), mode='constant', constant_values=0)
+        # precomputed wall-segment lookup table for qpos_is_valid
+        self.walls_per_tile, self.n_walls_per_tile = self._precompute_wall_segments_fast()
 
         # mover configuration
         self.num_movers = num_movers
@@ -401,37 +403,68 @@ class BasicMagBotEnv:
         assert mover_qpos.shape == (num_movers, 7)
 
         adjusted_c_size = c_size + self.c_size_offset * int(add_safety_offset)
-        c_size_arr = self.get_c_size_arr(c_size=adjusted_c_size, num_reps=self.num_movers)
-
-        if num_movers == self.num_movers:
-            i_idx, j_idx = self._triu_indices
-        else:
-            i_idx, j_idx = np.triu_indices(num_movers, k=1)
 
         qpos = mover_qpos[:, :2]
-        qpos_i = qpos[i_idx]
-        qpos_j = qpos[j_idx]
-        delta = qpos_i - qpos_j
-        size_i = c_size_arr[i_idx]
-        size_j = c_size_arr[j_idx]
+
+        if self.c_shape == 'circle':
+            _max_interaction_dist = 2.0 * float(np.max(adjusted_c_size))
+        else:  # 'box'
+            if np.ndim(adjusted_c_size) == 1:
+                # Uniform half-extents (hx, hy): bounding radius = sqrt(hx^2 + hy^2).
+                _max_interaction_dist = 2.0 * float(np.hypot(adjusted_c_size[0], adjusted_c_size[1]))
+            else:
+                # Per-mover half-extents, shape (num_movers, 2).
+                _max_interaction_dist = 2.0 * float(np.max(np.hypot(adjusted_c_size[:, 0], adjusted_c_size[:, 1])))
+
+        i_idx, j_idx = self._build_spatial_pairs(qpos, _max_interaction_dist)
+
+        if len(i_idx) == 0:
+            return np.bool_(False)
+
+        # Compute pairwise displacement for candidate pairs only.
+        delta = qpos[i_idx] - qpos[j_idx]
 
         if self.c_shape == 'circle':
             dist_sq = delta[:, 0] ** 2 + delta[:, 1] ** 2
-            radius_sum = (size_i.flatten() + size_j.flatten()) ** 2
-            return np.any(dist_sq <= radius_sum)
+            # Uniform-size fast path: when all movers share the same radius, the collision
+            # threshold is a scalar (2r)^2
+            if np.ndim(adjusted_c_size) == 0:
+                return np.any(dist_sq <= (2.0 * float(adjusted_c_size)) ** 2)
+            c_size_arr = self.get_c_size_arr(c_size=adjusted_c_size, num_reps=self.num_movers)
+            size_i = c_size_arr[i_idx]
+            size_j = c_size_arr[j_idx]
+            return np.any(dist_sq <= (size_i.flatten() + size_j.flatten()) ** 2)
 
         elif self.c_shape == 'box':
-            dist = np.linalg.norm(delta, axis=1)
-            diag_size = np.linalg.norm(np.maximum(size_i, size_j) * 2, ord=1, axis=1)
-            mask = dist <= diag_size
+            dist_sq = delta[:, 0] ** 2 + delta[:, 1] ** 2
+            # Uniform-size fast path: when adjusted_c_size has shape (2,) all movers share the
+            # same half-extents, so the pre-filter threshold is a scalar
+            uniform_box = hasattr(adjusted_c_size, 'shape') and adjusted_c_size.shape == (2,)
+            if uniform_box:
+                diag_size_sq = ((float(adjusted_c_size[0]) + float(adjusted_c_size[1])) * 2) ** 2
+                mask = dist_sq <= diag_size_sq
+            else:
+                c_size_arr = self.get_c_size_arr(c_size=adjusted_c_size, num_reps=self.num_movers)
+                size_i = c_size_arr[i_idx]
+                size_j = c_size_arr[j_idx]
+                max_sizes = np.maximum(size_i, size_j)
+                diag_size_sq = ((max_sizes[:, 0] + max_sizes[:, 1]) * 2) ** 2
+                mask = dist_sq <= diag_size_sq
 
             if not mask.any():
                 return np.bool_(False)
 
             qpos_i = mover_qpos[i_idx][mask]
             qpos_j = mover_qpos[j_idx][mask]
-            size_i = size_i[mask]
-            size_j = size_j[mask]
+            if uniform_box:
+                # Broadcast a single (1, 2) half-size row across all candidates
+                half_sizes = adjusted_c_size.reshape(1, 2)
+                size_cand = np.broadcast_to(half_sizes, (int(mask.sum()), 2))
+                size_i = size_cand
+                size_j = size_cand
+            else:
+                size_i = size_i[mask]
+                size_j = size_j[mask]
 
             collisions = geometry_2D_utils.check_rectangles_intersect(
                 qpos_r1=qpos_i,
@@ -444,6 +477,102 @@ class BasicMagBotEnv:
 
         else:
             raise ValueError('Unsupported collision shape.')
+
+    def _build_spatial_pairs(
+        self,
+        qpos_xy: np.ndarray,
+        max_interaction_dist: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return candidate mover-pair indices using the tile grid as a spatial hash.
+
+        Instead of the O(n^2) all-pairs approach (where n is the number of movers), each mover
+        is assigned to the tile its centre falls in via the same floor-division used in
+        :meth:`qpos_is_valid`, and only pairs whose tiles lie within the interaction neighbourhood
+        are returned.  This reduces pair count from O(n^2) to O(n * k) where k is the mean number
+        of movers in the neighbourhood.
+
+        :param qpos_xy: (n, 2) array of mover (x, y) positions (n = number of movers).
+        :param max_interaction_dist: conservative upper bound on the centre-to-centre
+            distance at which two movers can possibly collide.
+        :return: ``(i_idx, j_idx)`` flat arrays of mover indices such that every entry
+            ``(i_idx[k], j_idx[k])`` is a unique unordered candidate pair within the
+            neighbourhood. Every potentially colliding pair is guaranteed to appear
+            exactly once.
+        """
+        n = qpos_xy.shape[0]
+
+        tile_step_x = 2.0 * self.tile_size[0]
+        tile_step_y = 2.0 * self.tile_size[1]
+        tile_origin_x = self.x_pos_tiles[0, 0] - self.tile_size[0]
+        tile_origin_y = self.y_pos_tiles[0, 0] - self.tile_size[1]
+
+        # Neighbourhood radius
+        R_x = int(max_interaction_dist / tile_step_x) + 1
+        R_y = int(max_interaction_dist / tile_step_y) + 1
+
+        # Assign each mover to a tile.
+        ti = np.floor((qpos_xy[:, 0] - tile_origin_x) / tile_step_x).astype(np.intp)
+        tj = np.floor((qpos_xy[:, 1] - tile_origin_y) / tile_step_y).astype(np.intp)
+        ti = np.clip(ti, 0, self.num_tiles_x - 1)
+        tj = np.clip(tj, 0, self.num_tiles_y - 1)
+
+        stride = self.num_tiles_y + R_y
+        tile_flat = (ti * stride + tj).astype(np.intp)
+
+        # Sort movers by flat tile index to enable O(n log n) neighbour lookup.
+        sorted_order = np.argsort(tile_flat, kind='stable')
+        sorted_flat = tile_flat[sorted_order]
+
+        all_a: list[np.ndarray] = []
+        all_b: list[np.ndarray] = []
+
+        # Enumerate the canonical upper-half of tile offsets so that each unordered
+        # pair of distinct tiles is visited exactly once
+        for di in range(0, R_x + 1):
+            dj_start = 1 if di == 0 else -R_y
+            for dj in range(dj_start, R_y + 1):
+                offset = np.intp(di * stride + dj)
+                # For each mover (in sorted order), find movers in tile t + (di, dj).
+                target = sorted_flat + offset
+                lo = np.searchsorted(sorted_flat, target, side='left')
+                hi = np.searchsorted(sorted_flat, target, side='right')
+                counts = (hi - lo).astype(np.intp)
+                total = int(counts.sum())
+                if total == 0:
+                    continue
+
+                # Vectorised range expansion: build a-indices (repeated per partner count)
+                # and b-indices (lo[a] + local offset within the group) with no Python
+                # loop over individual movers.
+                cumul = np.empty(n + 1, dtype=np.intp)
+                cumul[0] = 0
+                np.cumsum(counts, out=cumul[1:])
+                a_s = np.repeat(np.arange(n, dtype=np.intp), counts)
+                group_local = np.arange(total, dtype=np.intp) - np.repeat(cumul[:-1], counts)
+                b_s = np.repeat(lo, counts) + group_local
+                all_a.append(sorted_order[a_s])
+                all_b.append(sorted_order[b_s])
+
+        # For each mover at sorted position i, pair it with every mover j > i in
+        # the same tile — ensures each unordered intra-tile pair appears exactly once.
+        hi_same = np.searchsorted(sorted_flat, sorted_flat, side='right')
+        adj_lo = np.arange(n, dtype=np.intp) + 1  # i+1 guarantees i < j in sorted order
+        counts_s = np.maximum(hi_same - adj_lo, 0).astype(np.intp)
+        total_s = int(counts_s.sum())
+        if total_s > 0:
+            cumul_s = np.empty(n + 1, dtype=np.intp)
+            cumul_s[0] = 0
+            np.cumsum(counts_s, out=cumul_s[1:])
+            a_s2 = np.repeat(np.arange(n, dtype=np.intp), counts_s)
+            group_local_s = np.arange(total_s, dtype=np.intp) - np.repeat(cumul_s[:-1], counts_s)
+            b_s2 = np.repeat(adj_lo, counts_s) + group_local_s
+            all_a.append(sorted_order[a_s2])
+            all_b.append(sorted_order[b_s2])
+
+        if not all_a:
+            return np.empty(0, dtype=np.intp), np.empty(0, dtype=np.intp)
+
+        return np.concatenate(all_a), np.concatenate(all_b)
 
     def check_wall_collision(
         self,
@@ -512,22 +641,20 @@ class BasicMagBotEnv:
         ignore_orientation = self.c_shape == 'circle'
 
         layout = self.layout_tiles
-        layout_wc = self.layout_tiles_wc
         x_pos_tiles = self.x_pos_tiles
         y_pos_tiles = self.y_pos_tiles
         tile_size_x, tile_size_y = self.tile_size[:2]
 
+        # Fast path: all tiles present — only the four global border walls matter
         if np.all(layout == 1):
             qpos_x = qpos[:, 0]
             qpos_y = qpos[:, 1]
-
             min_x_bound = x_pos_tiles[0, 0] - tile_size_x
             max_x_bound = x_pos_tiles[-1, -1] + tile_size_x
             min_y_bound = y_pos_tiles[0, 0] - tile_size_y
             max_y_bound = y_pos_tiles[-1, -1] + tile_size_y
-
             if ignore_orientation:
-                pos_is_valid = (
+                return (
                     (min_x_bound < qpos_x - c_size_arr[:, 0])
                     & (qpos_x + c_size_arr[:, 0] < max_x_bound)
                     & (min_y_bound < qpos_y - c_size_arr[:, 0])
@@ -535,309 +662,252 @@ class BasicMagBotEnv:
                 ).astype(int)
             else:
                 mover_vertices = geometry_2D_utils.get_2D_rect_vertices(qpos=qpos, size=c_size_arr)
-                pos_is_valid = (
-                    (min_x_bound < mover_vertices[:, 0, :]).all(axis=1)
-                    & (mover_vertices[:, 0, :] < max_x_bound).all(axis=1)
-                    & (min_y_bound < mover_vertices[:, 1, :]).all(axis=1)
-                    & (mover_vertices[:, 1, :] < max_y_bound).all(axis=1)
+
+                vx = mover_vertices[:, 0, :]  # (n, 4) x-coords of vertices
+                vy = mover_vertices[:, 1, :]  # (n, 4) y-coords of vertices
+                return (
+                    (min_x_bound < vx.min(axis=1))
+                    & (vx.max(axis=1) < max_x_bound)
+                    & (min_y_bound < vy.min(axis=1))
+                    & (vy.max(axis=1) < max_y_bound)
                 ).astype(int)
 
-            return pos_is_valid
+        # Locate each mover's tile via floor division
+        tile_step_x = 2.0 * tile_size_x
+        tile_step_y = 2.0 * tile_size_y
+        tile_origin_x = x_pos_tiles[0, 0] - tile_size_x
+        tile_origin_y = y_pos_tiles[0, 0] - tile_size_y
 
-        # collision shape == 'box': get mover vertices
-        if not ignore_orientation:
-            mover_vertices = geometry_2D_utils.get_2D_rect_vertices(qpos=qpos, size=c_size_arr)
+        tile_i_f = (qpos[:, 0] - tile_origin_x) / tile_step_x
+        tile_j_f = (qpos[:, 1] - tile_origin_y) / tile_step_y
 
-        # start test
-        pos_is_valid = np.zeros(num_qpos, dtype=np.int8)
+        in_bounds = (tile_i_f >= 0.0) & (tile_i_f < self.num_tiles_x) & (tile_j_f >= 0.0) & (tile_j_f < self.num_tiles_y)
 
-        # roughly locate the movers -> find the indices of tiles with a mover above them
-        qpos_x_all = qpos[:, 0, np.newaxis, np.newaxis]
-        qpos_y_all = qpos[:, 1, np.newaxis, np.newaxis]
+        tile_i = np.clip(np.floor(tile_i_f).astype(np.intp), 0, self.num_tiles_x - 1)
+        tile_j = np.clip(np.floor(tile_j_f).astype(np.intp), 0, self.num_tiles_y - 1)
 
-        mask_above_tile = (
-            (x_pos_tiles - tile_size_x <= qpos_x_all)
-            & (qpos_x_all <= x_pos_tiles + tile_size_x)
-            & (y_pos_tiles - tile_size_y <= qpos_y_all)
-            & (qpos_y_all <= y_pos_tiles + tile_size_y)
-        )
+        # Positions above absent tiles are immediately invalid
+        pos_is_valid = in_bounds & (layout[tile_i, tile_j] == 1)
 
-        assert np.sum(mask_above_tile) >= num_qpos, (
-            'At least one mover is not above a tile. An episode should be terminated in case of wall collision. '
-            + 'This error is probably caused by a missed termination of the episode.'
-        )
-        idx_qpos, idx_tiles_x, idx_tiles_y = np.nonzero(mask_above_tile)
-        if not ignore_orientation:
-            mover_vertices = mover_vertices[idx_qpos, :, :]
-        # min, max x pos of all relevant tiles
-        min_x_tiles = x_pos_tiles[idx_tiles_x, idx_tiles_y] - tile_size_x
-        max_x_tiles = x_pos_tiles[idx_tiles_x, idx_tiles_y] + tile_size_x
-        # min, max y pos of all relevant tiles
-        min_y_tiles = y_pos_tiles[idx_tiles_x, idx_tiles_y] - tile_size_y
-        max_y_tiles = y_pos_tiles[idx_tiles_x, idx_tiles_y] + tile_size_y
+        # Run wall-intersection tests for the remaining candidates
+        candidates = np.where(pos_is_valid)[0]
+        if len(candidates) == 0:
+            return pos_is_valid.astype(int)
 
-        # check whether the tiles are completely surrounded by other tiles
-        # mask_complete.shape == (num_qpos,self.idx_x_tiles_3x3.shape[0])
-        mask_complete = (idx_tiles_x[:, np.newaxis] == self.idx_x_tiles_3x3[np.newaxis, :]) * (
-            idx_tiles_y[:, np.newaxis] == self.idx_y_tiles_3x3[np.newaxis, :]
-        )
-        idx_qpos_complete = idx_qpos[np.where(mask_complete)[0]]
-        pos_is_valid[idx_qpos_complete] = 1
-        if np.sum(pos_is_valid) == num_qpos:
-            return pos_is_valid
+        cand_ti = tile_i[candidates]
+        cand_tj = tile_j[candidates]
 
-        # at least one pos is above a tile which is not completely surrounded by other tiles
-        # (possibly without required safety margin to the edges of the tile)
-        # safe = above_tile and all distances to edges > safety margin
-        if ignore_orientation:
-            rep = 1
-            layout_tiles_expanded = layout[idx_tiles_x, idx_tiles_y][:, np.newaxis]
-            qpos_x_expanded = qpos[idx_qpos, 0][:, np.newaxis]
-            qpos_y_expanded = qpos[idx_qpos, 1][:, np.newaxis]
-            c_size_expanded = c_size_arr[idx_qpos, :]
-            min_x_tiles_expanded = min_x_tiles[:, np.newaxis]
-            max_x_tiles_expanded = max_x_tiles[:, np.newaxis]
-            min_y_tiles_expanded = min_y_tiles[:, np.newaxis]
-            max_y_tiles_expanded = max_y_tiles[:, np.newaxis]
+        # Movers whose tile neighbourhood has no wall segments are unconditionally valid
+        n_walls = self.n_walls_per_tile[cand_ti, cand_tj]
+        has_walls = n_walls > 0
+        wall_cand_local = np.where(has_walls)[0]  # indices into `candidates`
 
-            min_x_safe = layout_tiles_expanded * (min_x_tiles_expanded < qpos_x_expanded - c_size_expanded).astype(np.int8)
-            max_x_safe = layout_tiles_expanded * (qpos_x_expanded + c_size_expanded < max_x_tiles_expanded).astype(np.int8)
-            min_y_safe = layout_tiles_expanded * (min_y_tiles_expanded < qpos_y_expanded - c_size_expanded).astype(np.int8)
-            max_y_safe = layout_tiles_expanded * (qpos_y_expanded + c_size_expanded < max_y_tiles_expanded).astype(np.int8)
-        else:
-            rep = 4
-            layout_tiles_broadcast = layout[idx_tiles_x, idx_tiles_y][:, np.newaxis]
-            min_x_tiles_broadcast = min_x_tiles[:, np.newaxis]
-            max_x_tiles_broadcast = max_x_tiles[:, np.newaxis]
-            min_y_tiles_broadcast = min_y_tiles[:, np.newaxis]
-            max_y_tiles_broadcast = max_y_tiles[:, np.newaxis]
+        if len(wall_cand_local) > 0:
+            wall_cands = candidates[wall_cand_local]
+            wi = cand_ti[wall_cand_local]
+            wj = cand_tj[wall_cand_local]
 
-            min_x_safe = layout_tiles_broadcast * (min_x_tiles_broadcast < mover_vertices[:, 0, :]).astype(np.int8)
-            max_x_safe = layout_tiles_broadcast * (mover_vertices[:, 0, :] < max_x_tiles_broadcast).astype(np.int8)
-            min_y_safe = layout_tiles_broadcast * (min_y_tiles_broadcast < mover_vertices[:, 1, :]).astype(np.int8)
-            max_y_safe = layout_tiles_broadcast * (mover_vertices[:, 1, :] < max_y_tiles_broadcast).astype(np.int8)
+            # Gather precomputed wall segments: shape (n, max_walls, 4)
+            walls = self.walls_per_tile[wi, wj]
+            nw = n_walls[wall_cand_local]
 
-        # mask minimum and maximum indices
-        mask_idx_x_lmin = (idx_tiles_x > 0).astype(np.int8)
-        mask_idx_y_lmin = (idx_tiles_y > 0).astype(np.int8)
-        mask_idx_x_smax = (idx_tiles_x < self.num_tiles_x - 1).astype(np.int8)
-        mask_idx_y_smax = (idx_tiles_y < self.num_tiles_y - 1).astype(np.int8)
-
-        mask_valid = (min_x_safe * max_x_safe * min_y_safe * max_y_safe).astype(np.int8)
-
-        # update min_x_safe
-        mask_min_x_update_base = (mask_idx_x_lmin * layout_wc[idx_tiles_x, idx_tiles_y] * layout_wc[idx_tiles_x - 1, idx_tiles_y])[
-            :, np.newaxis
-        ]
-        mask_min_x_update = (1 - min_x_safe) * mask_min_x_update_base
-        mask_valid = mask_valid + mask_min_x_update * min_y_safe * max_y_safe
-        # update min_y_safe based on min_x_safe-update
-        mask_min_x_min_y_update = (1 - min_y_safe) * np.tile(
-            mask_idx_x_lmin
-            * mask_idx_y_lmin
-            * layout_wc[idx_tiles_x, idx_tiles_y]
-            * layout_wc[idx_tiles_x, idx_tiles_y - 1]
-            * layout_wc[idx_tiles_x - 1, idx_tiles_y - 1],
-            reps=(rep, 1),
-        ).T
-        mask_valid = mask_valid + mask_min_x_update * mask_min_x_min_y_update
-        # update max_y_safe based on min_x_safe-update
-        mask_min_x_max_y_update_base = (
-            mask_idx_x_lmin
-            * mask_idx_y_smax
-            * layout_wc[idx_tiles_x, idx_tiles_y]
-            * layout_wc[idx_tiles_x, idx_tiles_y + 1]
-            * layout_wc[idx_tiles_x - 1, idx_tiles_y + 1]
-        )[:, np.newaxis]
-        mask_min_x_max_y_update = (1 - max_y_safe) * mask_min_x_max_y_update_base
-        mask_valid = mask_valid + mask_min_x_update * mask_min_x_max_y_update
-
-        # update max_x_safe
-        mask_max_x_update_base = (mask_idx_x_smax * layout_wc[idx_tiles_x, idx_tiles_y] * layout_wc[idx_tiles_x + 1, idx_tiles_y])[
-            :, np.newaxis
-        ]
-        mask_max_x_update = (1 - max_x_safe) * mask_max_x_update_base
-        mask_valid = mask_valid + mask_max_x_update * min_y_safe * max_y_safe
-        # update min_y_safe based on max_x_safe-update
-        mask_max_x_min_y_update_base = (
-            mask_idx_x_smax
-            * mask_idx_y_lmin
-            * layout_wc[idx_tiles_x, idx_tiles_y]
-            * layout_wc[idx_tiles_x, idx_tiles_y - 1]
-            * layout_wc[idx_tiles_x + 1, idx_tiles_y - 1]
-        )[:, np.newaxis]
-        mask_max_x_min_y_update = (1 - min_y_safe) * mask_max_x_min_y_update_base
-        mask_valid = mask_valid + mask_max_x_update * mask_max_x_min_y_update
-        # update max_y_safe based on max_x_safe-update
-        mask_max_x_max_y_update_base = (
-            mask_idx_x_smax
-            * mask_idx_y_smax
-            * layout_wc[idx_tiles_x, idx_tiles_y]
-            * layout_wc[idx_tiles_x, idx_tiles_y + 1]
-            * layout_wc[idx_tiles_x + 1, idx_tiles_y + 1]
-        )[:, np.newaxis]
-        mask_max_x_max_y_update = (1 - max_y_safe) * mask_max_x_max_y_update_base
-        mask_valid = mask_valid + mask_max_x_update * mask_max_x_max_y_update
-
-        # update min_y_safe
-        mask_min_y_update_base = (mask_idx_y_lmin * layout_wc[idx_tiles_x, idx_tiles_y] * layout_wc[idx_tiles_x, idx_tiles_y - 1])[
-            :, np.newaxis
-        ]
-        mask_min_y_update = (1 - min_y_safe) * mask_min_y_update_base
-        mask_valid = mask_valid + mask_min_y_update * min_x_safe * max_x_safe
-
-        # update max_y_safe
-        mask_max_y_update_base = (mask_idx_y_smax * layout_wc[idx_tiles_x, idx_tiles_y] * layout_wc[idx_tiles_x, idx_tiles_y + 1])[
-            :, np.newaxis
-        ]
-        mask_max_y_update = (1 - max_y_safe) * mask_max_y_update_base
-        mask_valid = mask_valid + mask_max_y_update * min_x_safe * max_x_safe
-
-        assert np.bitwise_or(mask_valid == 0, mask_valid == 1).all()
-
-        if ignore_orientation:
-            mask_valid = mask_valid.flatten()
-        else:
-            mask_valid = np.sum(mask_valid, axis=1) == 4
-
-            idx_tiles_x_expanded = idx_tiles_x[:, np.newaxis]
-            idx_tiles_y_expanded = idx_tiles_y[:, np.newaxis]
-            tile_size_2d = self.tile_size[:2]
-
-            # bottom left
-            mask_2x2_bl_base = (mask_valid * mask_idx_x_smax * mask_idx_y_lmin)[:, np.newaxis]
-            mask_2x2_bl = (
-                mask_2x2_bl_base
-                * (idx_tiles_x_expanded == self.idx_x_tiles_2x2_bl[np.newaxis, :])
-                * (idx_tiles_y_expanded == self.idx_y_tiles_2x2_bl[np.newaxis, :] + 1)
-            )
-            sum_bl = np.sum(mask_2x2_bl, axis=1)
-            assert np.bitwise_or(sum_bl == 0, sum_bl == 1).all()
-            idx_qpos_bl = idx_qpos[sum_bl == 1]
-            if len(idx_qpos_bl) > 0:
-                qpos_missing_tiles = np.zeros((idx_qpos_bl.shape[0], 7), dtype=np.float64)
-                qpos_missing_tiles[:, 3] = 1.0
-
-                idx_mask_bl = np.where(mask_2x2_bl)
-
-                x_pos_values = self.x_pos_tiles[self.idx_x_tiles_2x2_bl + 1, self.idx_y_tiles_2x2_bl]
-                y_pos_values = self.y_pos_tiles[self.idx_x_tiles_2x2_bl + 1, self.idx_y_tiles_2x2_bl]
-
-                # Use advanced indexing instead of broadcasting large arrays
-                qpos_missing_tiles[:, 0] = x_pos_values[idx_mask_bl[1]]
-                qpos_missing_tiles[:, 1] = y_pos_values[idx_mask_bl[1]]
-
-                tile_sizes_array = np.tile(tile_size_2d, (idx_qpos_bl.shape[0], 1))
-
-                mt_intersect = geometry_2D_utils.check_rectangles_intersect(
-                    qpos_r1=qpos[idx_qpos_bl, :],
-                    qpos_r2=qpos_missing_tiles,
-                    size_r1=c_size_arr[idx_qpos_bl, :],
-                    size_r2=tile_sizes_array,
+            if ignore_orientation:
+                intersects = self._circle_walls_intersect_fast(
+                    centers=qpos[wall_cands, :2],
+                    radii=c_size_arr[wall_cands],
+                    walls=walls,
+                    n_walls=nw,
                 )
-                mask_valid[idx_mask_bl[0]] = (1 - mt_intersect) * mask_valid[idx_mask_bl[0]]
-
-            # bottom right
-            mask_2x2_br_base = (mask_valid * mask_idx_x_smax * mask_idx_y_smax)[:, np.newaxis]
-            mask_2x2_br = (
-                mask_2x2_br_base
-                * (idx_tiles_x_expanded == self.idx_x_tiles_2x2_br[np.newaxis, :])
-                * (idx_tiles_y_expanded == self.idx_y_tiles_2x2_br[np.newaxis, :])
-            )
-            sum_br = np.sum(mask_2x2_br, axis=1)
-            assert np.bitwise_or(sum_br == 0, sum_br == 1).all()
-            idx_qpos_br = idx_qpos[sum_br == 1]
-            if len(idx_qpos_br) > 0:
-                qpos_missing_tiles = np.zeros((idx_qpos_br.shape[0], 7), dtype=np.float64)
-                qpos_missing_tiles[:, 3] = 1.0
-
-                idx_mask_br = np.where(mask_2x2_br)
-                x_pos_values = self.x_pos_tiles[self.idx_x_tiles_2x2_br + 1, self.idx_y_tiles_2x2_br + 1]
-                y_pos_values = self.y_pos_tiles[self.idx_x_tiles_2x2_br + 1, self.idx_y_tiles_2x2_br + 1]
-
-                qpos_missing_tiles[:, 0] = x_pos_values[idx_mask_br[1]]
-                qpos_missing_tiles[:, 1] = y_pos_values[idx_mask_br[1]]
-
-                tile_sizes_array = np.tile(tile_size_2d, (idx_qpos_br.shape[0], 1))
-
-                mt_intersect = geometry_2D_utils.check_rectangles_intersect(
-                    qpos_r1=qpos[idx_qpos_br, :],
-                    qpos_r2=qpos_missing_tiles,
-                    size_r1=c_size_arr[idx_qpos_br, :],
-                    size_r2=tile_sizes_array,
+            else:
+                intersects = self._box_walls_intersect_fast(
+                    qpos=qpos[wall_cands],
+                    sizes=c_size_arr[wall_cands],
+                    walls=walls,
+                    n_walls=nw,
                 )
-                mask_valid[idx_mask_br[0]] = (1 - mt_intersect) * mask_valid[idx_mask_br[0]]
 
-            # top left
-            mask_2x2_tl_base = (mask_valid * mask_idx_x_lmin * mask_idx_y_lmin)[:, np.newaxis]
-            mask_2x2_tl = (
-                mask_2x2_tl_base
-                * (idx_tiles_x_expanded == self.idx_x_tiles_2x2_tl[np.newaxis, :] + 1)
-                * (idx_tiles_y_expanded == self.idx_y_tiles_2x2_tl[np.newaxis, :] + 1)
-            )
-            sum_tl = np.sum(mask_2x2_tl, axis=1)
-            assert np.bitwise_or(sum_tl == 0, sum_tl == 1).all()
-            idx_qpos_tl = idx_qpos[sum_tl == 1]
-            if len(idx_qpos_tl) > 0:
-                qpos_missing_tiles = np.zeros((idx_qpos_tl.shape[0], 7), dtype=np.float64)
-                qpos_missing_tiles[:, 3] = 1.0
-
-                idx_mask_tl = np.where(mask_2x2_tl)
-                x_pos_values = self.x_pos_tiles[self.idx_x_tiles_2x2_tl, self.idx_y_tiles_2x2_tl]
-                y_pos_values = self.y_pos_tiles[self.idx_x_tiles_2x2_tl, self.idx_y_tiles_2x2_tl]
-
-                qpos_missing_tiles[:, 0] = x_pos_values[idx_mask_tl[1]]
-                qpos_missing_tiles[:, 1] = y_pos_values[idx_mask_tl[1]]
-
-                tile_sizes_array = np.tile(tile_size_2d, (idx_qpos_tl.shape[0], 1))
-
-                mt_intersect = geometry_2D_utils.check_rectangles_intersect(
-                    qpos_r1=qpos[idx_qpos_tl, :],
-                    qpos_r2=qpos_missing_tiles,
-                    size_r1=c_size_arr[idx_qpos_tl, :],
-                    size_r2=tile_sizes_array,
-                )
-                mask_valid[idx_mask_tl[0]] = (1 - mt_intersect) * mask_valid[idx_mask_tl[0]]
-
-            # top right
-            mask_2x2_tr_base = (mask_valid * mask_idx_x_lmin * mask_idx_y_smax)[:, np.newaxis]
-            mask_2x2_tr = (
-                mask_2x2_tr_base
-                * (idx_tiles_x_expanded == self.idx_x_tiles_2x2_tr[np.newaxis, :] + 1)
-                * (idx_tiles_y_expanded == self.idx_y_tiles_2x2_tr[np.newaxis, :])
-            )
-            sum_tr = np.sum(mask_2x2_tr, axis=1)
-            assert np.bitwise_or(sum_tr == 0, sum_tr == 1).all()
-            idx_qpos_tr = idx_qpos[sum_tr == 1]
-            if len(idx_qpos_tr) > 0:
-                qpos_missing_tiles = np.zeros((idx_qpos_tr.shape[0], 7), dtype=np.float64)
-                qpos_missing_tiles[:, 3] = 1.0
-
-                idx_mask_tr = np.where(mask_2x2_tr)
-
-                x_pos_values = self.x_pos_tiles[self.idx_x_tiles_2x2_tr, self.idx_y_tiles_2x2_tr + 1]
-                y_pos_values = self.y_pos_tiles[self.idx_x_tiles_2x2_tr, self.idx_y_tiles_2x2_tr + 1]
-
-                qpos_missing_tiles[:, 0] = x_pos_values[idx_mask_tr[1]]
-                qpos_missing_tiles[:, 1] = y_pos_values[idx_mask_tr[1]]
-
-                tile_sizes_array = np.tile(tile_size_2d, (idx_qpos_tr.shape[0], 1))
-
-                mt_intersect = geometry_2D_utils.check_rectangles_intersect(
-                    qpos_r1=qpos[idx_qpos_tr, :],
-                    qpos_r2=qpos_missing_tiles,
-                    size_r1=c_size_arr[idx_qpos_tr, :],
-                    size_r2=tile_sizes_array,
-                )
-                mask_valid[idx_mask_tr[0]] = (1 - mt_intersect) * mask_valid[idx_mask_tr[0]]
-
-        if len(idx_qpos) > 0:
-            unique_idx, inverse = np.unique(idx_qpos, return_inverse=True)
-            all_valid = np.bincount(inverse) == np.bincount(inverse, weights=mask_valid)
-            pos_is_valid[unique_idx[all_valid]] = 1
+            pos_is_valid[wall_cands[intersects]] = False
 
         assert isinstance(pos_is_valid, np.ndarray) and pos_is_valid.shape == (num_qpos,)
         return pos_is_valid.astype(int)
+
+    @staticmethod
+    def _circle_walls_intersect_fast(
+        centers: np.ndarray,
+        radii: np.ndarray,
+        walls: np.ndarray,
+        n_walls: np.ndarray,
+    ) -> np.ndarray:
+        """Return True for each mover whose circle intersects at least one wall segment.
+
+        The distance from the circle centre to each axis-aligned wall segment is computed in
+        closed form using the standard point-to-segment projection formula, vectorised over
+        the (num_movers, max_walls) pair space.
+
+        :param centers: (n, 2) circle centres, where n is the number of movers
+        :param radii: (n, 1) circle radii
+        :param walls: (n, max_walls, 4) wall segments as (x1, y1, x2, y2)
+        :param n_walls: (n,) number of valid wall entries per mover (remainder are padding)
+        :return: (n,) bool array, True where at least one wall is intersected
+        """
+        px = centers[:, 0:1]  # (n, 1)
+        py = centers[:, 1:2]
+
+        x1 = walls[:, :, 0]  # (n, max_walls)
+        y1 = walls[:, :, 1]
+        x2 = walls[:, :, 2]
+        y2 = walls[:, :, 3]
+
+        dx = x2 - x1
+        dy = y2 - y1
+        len_sq = dx * dx + dy * dy  # always > 0 for tile-edge segments
+
+        # Parameter t of the closest point on the segment, clamped to [0, 1]
+        t = np.clip(((px - x1) * dx + (py - y1) * dy) / (len_sq + 1e-30), 0.0, 1.0)
+
+        # Squared distance from centre to the closest point on the segment
+        dist_sq = (px - (x1 + t * dx)) ** 2 + (py - (y1 + t * dy)) ** 2  # (n, max_walls)
+
+        # Only count intersections against walls that actually exist for this mover
+        valid_wall = np.arange(walls.shape[1])[np.newaxis, :] < n_walls[:, np.newaxis]  # (n, max_walls)
+
+        return np.any(valid_wall & (dist_sq <= radii**2), axis=1)
+
+    @staticmethod
+    def _box_walls_intersect_fast(
+        qpos: np.ndarray,
+        sizes: np.ndarray,
+        walls: np.ndarray,
+        n_walls: np.ndarray,
+    ) -> np.ndarray:
+        """Return True for each mover whose rotated box intersects at least one wall segment.
+
+        :param qpos: (n, 7) box positions and quaternions (x, y, z, w, qx, qy, qz), where n is the number of movers
+        :param sizes: (n, 2) box half-sizes (hx, hy)
+        :param walls: (n, max_walls, 4) wall segments as (x1, y1, x2, y2)
+        :param n_walls: (n,) number of valid wall entries per mover
+        :return: (n,) bool array, True where at least one wall is intersected
+        """
+        # Box centre and half-sizes, shaped for (n, max_walls) broadcasting
+        cx = qpos[:, 0, np.newaxis]  # (n, 1)
+        cy = qpos[:, 1, np.newaxis]
+        hx = sizes[:, 0, np.newaxis]
+        hy = sizes[:, 1, np.newaxis]
+
+        # Yaw angle extracted from quaternion stored as (w, qx, qy, qz) at indices 3-6
+        w_q = qpos[:, 3]
+        q_x = qpos[:, 4]
+        q_y = qpos[:, 5]
+        q_z = qpos[:, 6]
+        yaw = np.arctan2(2.0 * (w_q * q_z + q_x * q_y), 1.0 - 2.0 * (q_y * q_y + q_z * q_z))
+        cos_t = np.cos(yaw)[:, np.newaxis]  # (n, 1)
+        sin_t = np.sin(yaw)[:, np.newaxis]
+
+        x1 = walls[:, :, 0]  # (n, max_walls)
+        y1 = walls[:, :, 1]
+        x2 = walls[:, :, 2]
+        y2 = walls[:, :, 3]
+
+        # Mask for padding slots that do not correspond to real wall segments
+        valid_wall = np.arange(walls.shape[1])[np.newaxis, :] < n_walls[:, np.newaxis]  # (n, max_walls)
+
+        # Axis 1: global x (1, 0)
+        # Box AABB half-extent along x: |hx·cos| + |hy·sin|
+        Rx = np.abs(hx * cos_t) + np.abs(hy * sin_t)
+        sep_x = (cx + Rx < np.minimum(x1, x2)) | (cx - Rx > np.maximum(x1, x2))
+
+        # Axis 2: global y (0, 1)
+        Ry = np.abs(hx * sin_t) + np.abs(hy * cos_t)
+        sep_y = (cy + Ry < np.minimum(y1, y2)) | (cy - Ry > np.maximum(y1, y2))
+
+        # Axis 3: box local x = (cos_t, sin_t)
+        # Project both segment endpoints onto this axis, relative to the box centre
+        p1_ax = (x1 - cx) * cos_t + (y1 - cy) * sin_t
+        p2_ax = (x2 - cx) * cos_t + (y2 - cy) * sin_t
+        sep_ax = (np.maximum(p1_ax, p2_ax) < -hx) | (np.minimum(p1_ax, p2_ax) > hx)
+
+        # Axis 4: box local y = (-sin_t, cos_t)
+        p1_ay = -(x1 - cx) * sin_t + (y1 - cy) * cos_t
+        p2_ay = -(x2 - cx) * sin_t + (y2 - cy) * cos_t
+        sep_ay = (np.maximum(p1_ay, p2_ay) < -hy) | (np.minimum(p1_ay, p2_ay) > hy)
+
+        # Separated on any axis -> no intersection for that (mover, wall) pair
+        no_intersect = sep_x | sep_y | sep_ax | sep_ay
+
+        return np.any(valid_wall & ~no_intersect, axis=1)
+
+    def _precompute_wall_segments_fast(self) -> tuple[np.ndarray, np.ndarray]:
+        """Precompute a per-tile lookup table of wall segments for qpos_is_valid.
+
+        A wall segment is an axis-aligned line segment along the edge of a present tile that
+        faces either an absent tile or the layout border. For each present tile (i, j), every
+        wall segment within its 3 x 3 tile neighbourhood is collected and packed into a padded
+        array, enabling O(1) retrieval at runtime.
+
+        :return: a tuple (walls_per_tile, n_walls_per_tile) where
+
+            - walls_per_tile has shape (num_tiles_x, num_tiles_y, max_walls, 4), storing
+              wall segments as (x1, y1, x2, y2); unused slots are zero-filled.
+            - n_walls_per_tile has shape (num_tiles_x, num_tiles_y) and holds the count of
+              valid wall segments per tile.
+        """
+        ts_x, ts_y = self.tile_size[:2]
+        num_x, num_y = self.num_tiles_x, self.num_tiles_y
+        layout = self.layout_tiles
+
+        # Collect the wall segments owned by each individual present tile.
+        # A segment is added for each edge that borders an absent tile or the grid border.
+        tile_walls: dict[tuple[int, int], list[tuple[float, float, float, float]]] = {}
+        for i in range(num_x):
+            for j in range(num_y):
+                if layout[i, j] == 0:
+                    continue
+                x = self.x_pos_tiles[i, j]
+                y = self.y_pos_tiles[i, j]
+                x_l, x_r = x - ts_x, x + ts_x
+                y_b, y_t = y - ts_y, y + ts_y
+                segs: list[tuple[float, float, float, float]] = []
+                if i == 0 or layout[i - 1, j] == 0:
+                    segs.append((x_l, y_b, x_l, y_t))  # left wall  (vertical)
+                if i == num_x - 1 or layout[i + 1, j] == 0:
+                    segs.append((x_r, y_b, x_r, y_t))  # right wall (vertical)
+                if j == 0 or layout[i, j - 1] == 0:
+                    segs.append((x_l, y_b, x_r, y_b))  # bottom wall (horizontal)
+                if j == num_y - 1 or layout[i, j + 1] == 0:
+                    segs.append((x_l, y_t, x_r, y_t))  # top wall   (horizontal)
+                if segs:
+                    tile_walls[(i, j)] = segs
+
+        # For each present tile, merge the wall segments from its 3 x 3 neighbourhood.
+        # A mover centred in tile (i, j) can reach at most one tile in any direction, so the
+        # 3 x 3 window captures all walls it could possibly intersect.
+        max_walls = 0
+        neighbourhood_walls: dict[tuple[int, int], list[tuple[float, float, float, float]]] = {}
+        for i in range(num_x):
+            for j in range(num_y):
+                if layout[i, j] == 0:
+                    continue
+                merged: list[tuple[float, float, float, float]] = []
+                for di in (-1, 0, 1):
+                    for dj in (-1, 0, 1):
+                        nb = (i + di, j + dj)
+                        if nb in tile_walls:
+                            merged.extend(tile_walls[nb])
+                neighbourhood_walls[(i, j)] = merged
+                if len(merged) > max_walls:
+                    max_walls = len(merged)
+
+        max_walls = max(max_walls, 1)  # guard against single-tile layouts
+
+        walls_per_tile = np.zeros((num_x, num_y, max_walls, 4), dtype=np.float64)
+        n_walls_per_tile = np.zeros((num_x, num_y), dtype=np.int32)
+        for (i, j), segs in neighbourhood_walls.items():
+            n = len(segs)
+            n_walls_per_tile[i, j] = n
+            if n > 0:
+                walls_per_tile[i, j, :n, :] = np.array(segs, dtype=np.float64)
+
+        return walls_per_tile, n_walls_per_tile
 
     ###################################################
     # MuJoCo                                          #
@@ -861,26 +931,16 @@ class BasicMagBotEnv:
         """
         if isinstance(mover_names, str):
             mover_names = [mover_names]
-        mover_indices = np.array([self.mover_name_to_idx[mover_name] for mover_name in mover_names], dtype=np.int32)
-        mover_qpos = self.data.qpos[self.mover_qpos_indices[mover_indices, :]]
 
-        if isinstance(self.mover_shape, list):
-            shapes = np.array(self.mover_shape[mover_indices])
+        # Fast path: caller requested all movers
+        if mover_names is self.mover_names:
+            mover_qpos = self.data.qpos[self.mover_qpos_indices]
+            mover_qpos[:, 2] -= self._mover_z_adj
         else:
-            assert isinstance(self.mover_shape, str)
-            shapes = np.array([self.mover_shape] * mover_qpos.shape[0])
+            mover_indices = np.array([self.mover_name_to_idx[mover_name] for mover_name in mover_names], dtype=np.int32)
+            mover_qpos = self.data.qpos[self.mover_qpos_indices[mover_indices, :]]
 
-        if len(self.mover_size.shape) == 2:
-            sizes = self.mover_size[mover_indices, :]
-        else:
-            assert len(self.mover_size.shape) == 1
-            sizes = np.broadcast_to(self.mover_size, (mover_qpos.shape[0], self.mover_size.shape[0]))
-
-        mask_box_mesh = np.bitwise_or(shapes == 'box', shapes == 'mesh')
-        mask_cylinder = shapes == 'cylinder'
-
-        mover_qpos[mask_box_mesh, 2] -= sizes[mask_box_mesh, 2]
-        mover_qpos[mask_cylinder, 2] -= sizes[mask_cylinder, 1]
+            mover_qpos[:, 2] -= self._mover_z_adj[mover_indices]
 
         if add_noise:
             mover_qpos += self.rng_noise.normal(loc=0.0, scale=self.std_noise[0], size=mover_qpos.shape)
@@ -950,6 +1010,32 @@ class BasicMagBotEnv:
 
         self.mover_qpos_indices = mover_joint_qpos_adrs[:, np.newaxis] + np.arange(qpos_ndim)
         self.mover_qvel_qacc_indices = mover_joint_qvel_qacc_adrs[:, np.newaxis] + np.arange(qvel_qacc_ndim)
+        # Precompute the per-mover z-position adjustment applied in get_mover_qpos
+        self._mover_z_adj = self._build_mover_z_adj()
+
+    def _build_mover_z_adj(self) -> np.ndarray:
+        """Precompute per-mover z-position adjustments.
+
+        :return: float64 array of shape (num_movers,) where entry ``i`` is the z offset to subtract from the raw qpos z of mover ``i``
+            (ordered consistently with ``self.mover_names``). For box/mesh movers this is ``size[2]``; for cylinder movers it
+            is ``size[1]``; for any other shape it is ``0``.
+        """
+        if isinstance(self.mover_shape, list):
+            shapes = np.array(self.mover_shape)
+        else:
+            shapes = np.array([self.mover_shape] * self.num_movers)
+
+        if len(self.mover_size.shape) == 2:
+            sizes = self.mover_size  # (num_movers, 3)
+        else:
+            sizes = np.broadcast_to(self.mover_size, (self.num_movers, self.mover_size.shape[0]))
+
+        z_adj = np.zeros(self.num_movers, dtype=np.float64)
+        mask_box_mesh = np.bitwise_or(shapes == 'box', shapes == 'mesh')
+        mask_cylinder = shapes == 'cylinder'
+        z_adj[mask_box_mesh] = sizes[mask_box_mesh, 2]
+        z_adj[mask_cylinder] = sizes[mask_cylinder, 1]
+        return z_adj
 
     def _generate_mover_xml_strings(
         self,

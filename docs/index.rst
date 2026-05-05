@@ -166,6 +166,19 @@ or `Tianshou <https://tianshou.org/en/stable/>`_.
 The library contains a collection of existing RL environments in the field of Magnetic Robotics, which will continue to be updated in the future, as well as basic single-agent and 
 multi-agent environments that serve as starting points for the easy development of new research-specific environments.
 
+Simulation Performance
+^^^^^^^^^^^^^^^^^^^^^^
+Process time scales near-linearly from ~0.15 ms at 50 movers to ~2.7 ms at 1,000 movers, with
+negligible difference between the circle and box collision shapes. Each data point is the mean over
+100 simulation steps (applying controls, one MuJoCo integrator step, and collision checking), with
+tiles in a square grid and one mover per tile. Measured on a MacBook Pro (2020), Apple M1,
+16 GB RAM, macOS 26.2.
+
+.. image:: _static/plot_scalability.svg
+   :alt: Process time per simulation step vs. number of movers, for circle and box collision shapes
+   :align: center
+   :width: 80%
+
 .. _citation:
 
 Paper & Citation

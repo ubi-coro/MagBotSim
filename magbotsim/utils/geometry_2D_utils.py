@@ -3,7 +3,6 @@
 ##########################################################
 
 import numpy as np
-from scipy.spatial.transform import Rotation as R
 
 
 def check_line_segments_intersect(p1: np.ndarray, p2: np.ndarray, q1: np.ndarray, q2: np.ndarray) -> np.ndarray:
@@ -82,25 +81,29 @@ def get_2D_rect_vertices(qpos: np.ndarray, size: np.ndarray) -> np.ndarray:
     assert qpos.shape == (num_rectangles, 7)
     assert size.shape == (num_rectangles, 2)
 
-    quats = qpos[:, -4:].copy()
-    r_quats = R.from_quat(quats, scalar_first=True)  # quaternions are automatically normalized before initialization
-    rot_mats = r_quats.as_matrix()
-    assert rot_mats.shape == (num_rectangles, 3, 3)
-    # vertices w.r.t. local frame of each rectangle
-    vertices_l = np.array(
-        [
-            [-size[:, 0], -size[:, 0], size[:, 0], size[:, 0]],
-            [-size[:, 1], size[:, 1], size[:, 1], -size[:, 1]],
-            np.zeros((4, num_rectangles)),
-        ]
-    )
-    vertices_l = np.swapaxes(vertices_l, 0, 2)
-    vertices_l = np.swapaxes(vertices_l, 1, 2)
+    # Extract yaw from quaternion (w, qx, qy, qz) at indices 3-6.
+    # yaw = arctan2(2(wz + xy), 1 - 2(y^2 + z^2))
+    w_q = qpos[:, 3]
+    x_q = qpos[:, 4]
+    y_q = qpos[:, 5]
+    z_q = qpos[:, 6]
+    yaw = np.arctan2(2.0 * (w_q * z_q + x_q * y_q), 1.0 - 2.0 * (y_q * y_q + z_q * z_q))
+    cos_t = np.cos(yaw)  # (n,)
+    sin_t = np.sin(yaw)  # (n,)
 
-    # vertices w.r.t. base frame
-    vertices_b = (rot_mats @ vertices_l)[:, :2, :] + np.repeat(qpos[:, :2].reshape((num_rectangles, 2, -1)), 4, axis=2)
+    hx = size[:, 0]  # (n,)
+    hy = size[:, 1]  # (n,)
 
-    return vertices_b
+    # Local-frame coordinates of the four vertices:
+    #   v0=(-hx,-hy), v1=(-hx,+hy), v2=(+hx,+hy), v3=(+hx,-hy)
+    lx = np.column_stack([-hx, -hx, hx, hx])  # (n, 4)
+    ly = np.column_stack([-hy, hy, hy, -hy])  # (n, 4)
+
+    # Apply 2D rotation and translate to world frame
+    vx = cos_t[:, None] * lx - sin_t[:, None] * ly + qpos[:, 0:1]  # (n, 4)
+    vy = sin_t[:, None] * lx + cos_t[:, None] * ly + qpos[:, 1:2]  # (n, 4)
+
+    return np.stack([vx, vy], axis=1)  # (n, 2, 4)
 
 
 def check_rectangles_intersect(
