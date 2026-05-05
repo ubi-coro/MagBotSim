@@ -177,7 +177,7 @@ tiles in a square grid and one mover per tile. Measured on a MacBook Pro (2020),
 .. image:: _static/plot_scalability.svg
    :alt: Process time per simulation step vs. number of movers, for circle and box collision shapes
    :align: center
-   :width: 100%
+   :width: 80%
 
 .. _citation:
 
