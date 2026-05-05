@@ -168,8 +168,11 @@ multi-agent environments that serve as starting points for the easy development 
 
 Simulation Performance
 ^^^^^^^^^^^^^^^^^^^^^^
-Process time per simulation step scales near-linearly with the number of movers: from ~0.15 ms at
-50 movers to ~2.7 ms at 1000 movers. The box collision shape incurs only a small overhead compared to circle.
+Process time scales near-linearly from ~0.15 ms at 50 movers to ~2.7 ms at 1,000 movers, with
+negligible difference between the circle and box collision shapes. Each data point is the mean over
+100 simulation steps (applying controls, one MuJoCo integrator step, and collision checking), with
+tiles in a square grid and one mover per tile. Measured on a MacBook Pro (2020), Apple M1,
+16 GB RAM, macOS 26.2.
 
 .. image:: _static/plot_scalability.svg
    :alt: Process time per simulation step vs. number of movers, for circle and box collision shapes
