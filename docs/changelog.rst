@@ -1,13 +1,17 @@
 Changelog
 =========
 
-Pre-Release v1.0.4a1 (2026-05-05)
----------------------------------
+Release v1.1.0 (2026-05-08)
+---------------------------
 
 General
 ^^^^^^^
 1. The ``_step_callback`` of the ``BasicMagBotSingleAgentEnv`` now returns the possibly modified action instead of None.
 2. Added support for Python 3.14
+3. The ``StateBasedGlobalPushingEnv`` and all related pushing environments, such as ``StateBasedPushBoxEnv``, ``StateBasedPushTEnv``,
+   ``StateBasedPushLEnv``, and ``StateBasedPushXEnv`` now also support the rotation of the movers around the 
+   z-axis (:math:`\gamma`-rotation) to establish more stable contacts with the object. It is possible, but not necessary, to specify 
+   a limit for the :math:`\gamma`-rotation.
 
 Performance
 ^^^^^^^^^^^
@@ -23,6 +27,8 @@ Bug Fixes
 2. Fixed wrong gainprm in all RL environments
 3. Ensured correct maximum dynamics of the actions (RL environments). This is fixed by using the ``_step_callback``.
 
+------------------------------------------------------------------------------------------------------------------------------------
+
 Release v1.0.3 (2026-03-25)
 ---------------------------
 
@@ -30,6 +36,8 @@ General
 ^^^^^^^
 1. Fixed bug in ``StateBasedGlobalPushingEnv-v0``
 2. Updated RL examples
+
+------------------------------------------------------------------------------------------------------------------------------------
 
 Release v1.0.2 (2026-02-27)
 ---------------------------
@@ -40,6 +48,8 @@ General
 2. Added tutorial on how to add MagBots to custom environments
 3. Added example environments with MagBots (``SixDPlatformMagBotApplicationExampleEnv`` and ``SixDPlatformMagBotExampleEnv``)
 
+------------------------------------------------------------------------------------------------------------------------------------
+
 Release v1.0.1 (2025-11-24)
 ---------------------------
 
@@ -49,6 +59,8 @@ General
 2. Added benchmark environments
 3. Added ``StateBasedPushXEnv-v0`` and ``StateBasedPushLEnv-v0``
 4. Updated throughput calculation in pushing environments and update benchmark results accordingly
+
+------------------------------------------------------------------------------------------------------------------------------------
 
 Release v1.0.0 (2025-11-08)
 ---------------------------

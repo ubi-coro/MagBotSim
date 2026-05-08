@@ -61,7 +61,7 @@ from magbotsim.rl_envs.object_manipulation.pushing.state_based_global_pushing_en
         (2, 1.237, -150, 42, True, True),
     ],
 )
-def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y):
+def test_xy_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y):
     # environment
     v_max = 0.01  # [m/s]
     a_max = 0.2  # [m/s²]
@@ -90,9 +90,9 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
         render_mode=None,
         render_every_cycle=False,
         num_cycles=num_cycles,
-        v_max=v_max,
-        a_max=a_max,
-        j_max=j_max,
+        v_max_xy=v_max,
+        a_max_xy=a_max,
+        j_max_xy=j_max,
         learn_jerk=learn_jerk,
         use_mj_passive_viewer=False,
     )
@@ -128,8 +128,8 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
         next_j = jerk_arr.reshape((env.num_movers, 2))
         # ensure maximum jerk
         action_norm_tmp = np.linalg.norm(next_j, ord=2, axis=1)
-        action_norm = np.where(action_norm_tmp <= env.j_max, 1.0, action_norm_tmp)[:, None]
-        action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max)
+        action_norm = np.where(action_norm_tmp <= env.j_max_xy, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max_xy)
         next_j = np.divide(next_j, action_norm) * action_max_vals
 
         for idx_mover in range(0, num_movers):
@@ -143,8 +143,8 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
                 a = np.zeros(2)
 
             for _ in range(0, dt):
-                next_a, _ = env.ensure_max_dyn_val(a, env.a_max, next_j[idx_mover, :])
-                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a)
+                next_a, _ = env.ensure_max_dyn_val(a, env.a_max_xy, next_j[idx_mover, :])
+                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max_xy, next_a)
 
                 a = a_tmp.copy()
                 p = timestep * v + p
@@ -169,8 +169,8 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
 
             norm_velo = np.linalg.norm(velo_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
             norm_acc = np.linalg.norm(acc_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
-            assert np.allclose(norm_velo, env.v_max) or float(norm_velo) < env.v_max
-            assert np.allclose(norm_acc, env.a_max) or float(norm_acc) < env.a_max
+            assert np.allclose(norm_velo, env.v_max_xy) or float(norm_velo) < env.v_max_xy
+            assert np.allclose(norm_acc, env.a_max_xy) or float(norm_acc) < env.a_max_xy
 
     env.close()
 
@@ -232,7 +232,7 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
         (2, 1.237, -0.2, 42, True, True),
     ],
 )
-def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, test_y):
+def test_xy_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, test_y):
     # environment
     v_max = 0.01  # [m/s]
     a_max = 0.2  # [m/s²]
@@ -261,9 +261,9 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
         render_mode=None,
         render_every_cycle=False,
         num_cycles=num_cycles,
-        v_max=v_max,
-        a_max=a_max,
-        j_max=j_max,
+        v_max_xy=v_max,
+        a_max_xy=a_max,
+        j_max_xy=j_max,
         learn_jerk=learn_jerk,
         use_mj_passive_viewer=False,
     )
@@ -300,8 +300,8 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
         next_a = acc_arr.reshape((env.num_movers, 2))
         # ensure maximum acceleration
         action_norm_tmp = np.linalg.norm(next_a, ord=2, axis=1)
-        action_norm = np.where(action_norm_tmp <= env.a_max, 1.0, action_norm_tmp)[:, None]
-        action_max_vals = np.where(action_norm == 1.0, 1.0, env.a_max)
+        action_norm = np.where(action_norm_tmp <= env.a_max_xy, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, env.a_max_xy)
         next_a = np.divide(next_a, action_norm) * action_max_vals
 
         for idx_mover in range(0, num_movers):
@@ -315,7 +315,7 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
                 a = np.zeros(2)
 
             for _ in range(0, dt):
-                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a[idx_mover, :])
+                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max_xy, next_a[idx_mover, :])
 
                 a = a_tmp.copy()
                 p = timestep * v + p
@@ -340,11 +340,291 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
 
             norm_velo = np.linalg.norm(velo_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
             norm_acc = np.linalg.norm(acc_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
-            assert np.allclose(norm_velo, env.v_max) or float(norm_velo) < env.v_max
-            assert np.allclose(norm_acc, env.a_max) or float(norm_acc) < env.a_max
+            assert np.allclose(norm_velo, env.v_max_xy) or float(norm_velo) < env.v_max_xy
+            assert np.allclose(norm_acc, env.a_max_xy) or float(norm_acc) < env.a_max_xy
 
     env.close()
 
     assert np.allclose(pos_mj_manual, pos_mj_actuator)
     assert np.allclose(velo_mj_manual, velo_mj_actuator)
     assert np.allclose(acc_mj_manual, acc_mj_actuator)
+
+
+@pytest.mark.parametrize(
+    'num_movers, mover_mass, acc, num_cycles, p_max_c',
+    [
+        (1, 0.628, 122.0, 1, None),
+        (1, 0.628, -122.0, 1, None),
+        (1, 0.628, 61.0, 1, None),
+        (1, 0.628, -61.0, 1, None),
+        (2, 0.628, 122.0, 1, None),
+        (2, 0.628, -122.0, 1, None),
+        (2, 0.628, 61.0, 1, None),
+        (2, 0.628, -61.0, 1, None),
+        (1, 1.237, 122.0, 1, None),
+        (1, 1.237, -122.0, 1, None),
+        (1, 1.237, 61.0, 1, None),
+        (1, 1.237, -61.0, 1, None),
+        (2, 1.237, 122.0, 1, None),
+        (2, 1.237, -122.0, 1, None),
+        (2, 1.237, 61.0, 1, None),
+        (2, 1.237, -61.0, 1, None),
+        (1, 0.628, 122.0, 42, None),
+        (1, 0.628, -122.0, 42, None),
+        (1, 0.628, 61.0, 42, None),
+        (1, 0.628, -61.0, 42, None),
+        (2, 0.628, 122.0, 42, None),
+        (2, 0.628, -122.0, 42, None),
+        (2, 0.628, 61.0, 42, None),
+        (2, 0.628, -61.0, 42, None),
+        (1, 1.237, 122.0, 42, None),
+        (1, 1.237, -122.0, 42, None),
+        (1, 1.237, 61.0, 42, None),
+        (1, 1.237, -61.0, 42, None),
+        (2, 1.237, 122.0, 42, None),
+        (2, 1.237, -122.0, 42, None),
+        (2, 1.237, 61.0, 42, None),
+        (2, 1.237, -61.0, 42, None),
+        #
+        (1, 0.628, 122.0, 1, np.deg2rad(10)),
+        (1, 0.628, -122.0, 1, np.deg2rad(10)),
+        (1, 0.628, 61.0, 1, np.deg2rad(10)),
+        (1, 0.628, -61.0, 1, np.deg2rad(10)),
+        (2, 0.628, 122.0, 1, np.deg2rad(10)),
+        (2, 0.628, -122.0, 1, np.deg2rad(10)),
+        (2, 0.628, 61.0, 1, np.deg2rad(10)),
+        (2, 0.628, -61.0, 1, np.deg2rad(10)),
+        (1, 1.237, 122.0, 1, np.deg2rad(10)),
+        (1, 1.237, -122.0, 1, np.deg2rad(10)),
+        (1, 1.237, 61.0, 1, np.deg2rad(10)),
+        (1, 1.237, -61.0, 1, np.deg2rad(10)),
+        (2, 1.237, 122.0, 1, np.deg2rad(10)),
+        (2, 1.237, -122.0, 1, np.deg2rad(10)),
+        (2, 1.237, 61.0, 1, np.deg2rad(10)),
+        (2, 1.237, -61.0, 1, np.deg2rad(10)),
+        (1, 0.628, 122.0, 42, np.deg2rad(10)),
+        (1, 0.628, -122.0, 42, np.deg2rad(10)),
+        (1, 0.628, 61.0, 42, np.deg2rad(10)),
+        (1, 0.628, -61.0, 42, np.deg2rad(10)),
+        (2, 0.628, 122.0, 42, np.deg2rad(10)),
+        (2, 0.628, -122.0, 42, np.deg2rad(10)),
+        (2, 0.628, 61.0, 42, np.deg2rad(10)),
+        (2, 0.628, -61.0, 42, np.deg2rad(10)),
+        (1, 1.237, 122.0, 42, np.deg2rad(10)),
+        (1, 1.237, -122.0, 42, np.deg2rad(10)),
+        (1, 1.237, 61.0, 42, np.deg2rad(10)),
+        (1, 1.237, -61.0, 42, np.deg2rad(10)),
+        (2, 1.237, 122.0, 42, np.deg2rad(10)),
+        (2, 1.237, -122.0, 42, np.deg2rad(10)),
+        (2, 1.237, 61.0, 42, np.deg2rad(10)),
+        (2, 1.237, -61.0, 42, np.deg2rad(10)),
+    ],
+)
+def test_c_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, p_max_c):
+    # environment
+    v_max = np.deg2rad(7000)  # [rad/s]
+    a_max = np.deg2rad(7000)  # [rad/s²]
+    j_max = np.deg2rad(35000)  # [rad/s³]
+    learn_jerk = False
+    collision_shape = 'box'
+    collision_size = np.array([0.113 / 2 + 1e-6, 0.113 / 2 + 1e-6])
+    collision_offset = 0.0
+    collision_offset_wall = 0.0
+
+    mover_params = {'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': mover_mass}
+
+    collision_params = {
+        'shape': collision_shape,
+        'size': collision_size,
+        'offset': collision_offset,
+        'offset_wall': collision_offset_wall,
+    }
+
+    env = StateBasedGlobalPushingEnv(
+        num_movers=num_movers,
+        layout_tiles=np.ones((9, 9)),
+        mover_params=mover_params,
+        std_noise=0.0,
+        collision_params=collision_params,
+        render_mode=None,
+        render_every_cycle=False,
+        num_cycles=num_cycles,
+        learn_mover_c_rotation=True,
+        p_max_c=p_max_c,
+        v_max_c=v_max,
+        a_max_c=a_max,
+        j_max_c=j_max,
+        learn_jerk=learn_jerk,
+        use_mj_passive_viewer=False,
+    )
+
+    if num_movers == 1:
+        mover_start_xy_pos = np.array([[0.72, 0.36]])
+    elif num_movers == 2:
+        mover_start_xy_pos = np.array([[0.96, 0.96], [1.2, 1.2]])
+    env.reload_model(mover_start_xy_pos=mover_start_xy_pos)
+
+    num_steps = 200 if num_cycles == 1 else 10
+
+    pos_mj_actuator = np.zeros((num_steps, num_movers))
+    velo_mj_actuator = np.zeros((num_steps, num_movers))
+    acc_mj_actuator = np.zeros((num_steps, num_movers))
+
+    for step in range(0, num_steps):
+        acc_c = np.array([0.0, 0.0, acc] * num_movers)
+
+        # set acc in env
+        env.step(action=acc_c)
+
+        # measure position, velocity and acceleration
+        for idx_mover in range(0, num_movers):
+            qpos = env.get_mover_qpos(mover_names=env.mover_names[idx_mover], add_noise=False)
+            pos_mj_actuator[step, idx_mover] = env._get_yaw_from_qpos(qpos)[0]
+            velo_mj_actuator[step, idx_mover] = env.get_mover_qvel(mover_names=env.mover_names[idx_mover], add_noise=False)[0, -1]
+            acc_mj_actuator[step, idx_mover] = env.get_mover_qacc(mover_names=env.mover_names[idx_mover], add_noise=False)[0, -1]
+
+            if p_max_c is not None:
+                assert np.abs(pos_mj_actuator[step, idx_mover]) < p_max_c + np.deg2rad(0.5)
+            assert velo_mj_actuator[step, idx_mover] < env.v_max_c + 0.001
+
+    env.close()
+
+
+@pytest.mark.parametrize(
+    'num_movers, mover_mass, jerk, num_cycles, p_max_c',
+    [
+        (1, 0.628, 122.0, 1, None),
+        (1, 0.628, -122.0, 1, None),
+        (1, 0.628, 61.0, 1, None),
+        (1, 0.628, -61.0, 1, None),
+        (2, 0.628, 122.0, 1, None),
+        (2, 0.628, -122.0, 1, None),
+        (2, 0.628, 61.0, 1, None),
+        (2, 0.628, -61.0, 1, None),
+        (1, 1.237, 122.0, 1, None),
+        (1, 1.237, -122.0, 1, None),
+        (1, 1.237, 61.0, 1, None),
+        (1, 1.237, -61.0, 1, None),
+        (2, 1.237, 122.0, 1, None),
+        (2, 1.237, -122.0, 1, None),
+        (2, 1.237, 61.0, 1, None),
+        (2, 1.237, -61.0, 1, None),
+        (1, 0.628, 122.0, 42, None),
+        (1, 0.628, -122.0, 42, None),
+        (1, 0.628, 61.0, 42, None),
+        (1, 0.628, -61.0, 42, None),
+        (2, 0.628, 122.0, 42, None),
+        (2, 0.628, -122.0, 42, None),
+        (2, 0.628, 61.0, 42, None),
+        (2, 0.628, -61.0, 42, None),
+        (1, 1.237, 122.0, 42, None),
+        (1, 1.237, -122.0, 42, None),
+        (1, 1.237, 61.0, 42, None),
+        (1, 1.237, -61.0, 42, None),
+        (2, 1.237, 122.0, 42, None),
+        (2, 1.237, -122.0, 42, None),
+        (2, 1.237, 61.0, 42, None),
+        (2, 1.237, -61.0, 42, None),
+        #
+        (1, 0.628, 122.0, 1, np.deg2rad(10)),
+        (1, 0.628, -122.0, 1, np.deg2rad(10)),
+        (1, 0.628, 61.0, 1, np.deg2rad(10)),
+        (1, 0.628, -61.0, 1, np.deg2rad(10)),
+        (2, 0.628, 122.0, 1, np.deg2rad(10)),
+        (2, 0.628, -122.0, 1, np.deg2rad(10)),
+        (2, 0.628, 61.0, 1, np.deg2rad(10)),
+        (2, 0.628, -61.0, 1, np.deg2rad(10)),
+        (1, 1.237, 122.0, 1, np.deg2rad(10)),
+        (1, 1.237, -122.0, 1, np.deg2rad(10)),
+        (1, 1.237, 61.0, 1, np.deg2rad(10)),
+        (1, 1.237, -61.0, 1, np.deg2rad(10)),
+        (2, 1.237, 122.0, 1, np.deg2rad(10)),
+        (2, 1.237, -122.0, 1, np.deg2rad(10)),
+        (2, 1.237, 61.0, 1, np.deg2rad(10)),
+        (2, 1.237, -61.0, 1, np.deg2rad(10)),
+        (1, 0.628, 122.0, 42, np.deg2rad(10)),
+        (1, 0.628, -122.0, 42, np.deg2rad(10)),
+        (1, 0.628, 61.0, 42, np.deg2rad(10)),
+        (1, 0.628, -61.0, 42, np.deg2rad(10)),
+        (2, 0.628, 122.0, 42, np.deg2rad(10)),
+        (2, 0.628, -122.0, 42, np.deg2rad(10)),
+        (2, 0.628, 61.0, 42, np.deg2rad(10)),
+        (2, 0.628, -61.0, 42, np.deg2rad(10)),
+        (1, 1.237, 122.0, 42, np.deg2rad(10)),
+        (1, 1.237, -122.0, 42, np.deg2rad(10)),
+        (1, 1.237, 61.0, 42, np.deg2rad(10)),
+        (1, 1.237, -61.0, 42, np.deg2rad(10)),
+        (2, 1.237, 122.0, 42, np.deg2rad(10)),
+        (2, 1.237, -122.0, 42, np.deg2rad(10)),
+        (2, 1.237, 61.0, 42, np.deg2rad(10)),
+        (2, 1.237, -61.0, 42, np.deg2rad(10)),
+    ],
+)
+def test_c_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, p_max_c):
+    # environment
+    v_max = np.deg2rad(7000)  # [rad/s]
+    a_max = np.deg2rad(7000)  # [rad/s²]
+    j_max = np.deg2rad(35000)  # [rad/s³]
+    learn_jerk = True
+    collision_shape = 'box'
+    collision_size = np.array([0.113 / 2 + 1e-6, 0.113 / 2 + 1e-6])
+    collision_offset = 0.0
+    collision_offset_wall = 0.0
+
+    mover_params = {'size': np.array([0.113 / 2, 0.113 / 2, 0.012 / 2]), 'mass': mover_mass}
+
+    collision_params = {
+        'shape': collision_shape,
+        'size': collision_size,
+        'offset': collision_offset,
+        'offset_wall': collision_offset_wall,
+    }
+
+    env = StateBasedGlobalPushingEnv(
+        num_movers=num_movers,
+        layout_tiles=np.ones((9, 9)),
+        mover_params=mover_params,
+        std_noise=0.0,
+        collision_params=collision_params,
+        render_mode=None,
+        render_every_cycle=False,
+        num_cycles=num_cycles,
+        learn_mover_c_rotation=True,
+        p_max_c=p_max_c,
+        v_max_c=v_max,
+        a_max_c=a_max,
+        j_max_c=j_max,
+        learn_jerk=learn_jerk,
+        use_mj_passive_viewer=False,
+    )
+
+    if num_movers == 1:
+        mover_start_xy_pos = np.array([[0.72, 0.36]])
+    elif num_movers == 2:
+        mover_start_xy_pos = np.array([[0.96, 0.96], [1.2, 1.2]])
+    env.reload_model(mover_start_xy_pos=mover_start_xy_pos)
+
+    num_steps = 200 if num_cycles == 1 else 10
+
+    pos_mj_actuator = np.zeros((num_steps, num_movers))
+    velo_mj_actuator = np.zeros((num_steps, num_movers))
+    acc_mj_actuator = np.zeros((num_steps, num_movers))
+
+    for step in range(0, num_steps):
+        acc_c = np.array([0.0, 0.0, jerk] * num_movers)
+
+        # set acc in env
+        env.step(action=acc_c)
+
+        # measure position, velocity and acceleration
+        for idx_mover in range(0, num_movers):
+            qpos = env.get_mover_qpos(mover_names=env.mover_names[idx_mover], add_noise=False)
+            pos_mj_actuator[step, idx_mover] = env._get_yaw_from_qpos(qpos)[0]
+            velo_mj_actuator[step, idx_mover] = env.get_mover_qvel(mover_names=env.mover_names[idx_mover], add_noise=False)[0, -1]
+            acc_mj_actuator[step, idx_mover] = env.get_mover_qacc(mover_names=env.mover_names[idx_mover], add_noise=False)[0, -1]
+
+            if p_max_c is not None:
+                assert np.abs(pos_mj_actuator[step, idx_mover]) < p_max_c + np.deg2rad(0.5)
+            assert velo_mj_actuator[step, idx_mover] < env.v_max_c + 0.001
+
+    env.close()

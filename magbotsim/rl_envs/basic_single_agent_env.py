@@ -215,7 +215,7 @@ class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
         """
         # make sure that shape is correct and action is within action space
         if not isinstance(action, int):
-            assert action.shape == self.action_space.shape, logger.error('action dim != action_space dim')
+            assert action.shape == self.action_space.shape, 'action dim != action_space dim'
             if not self.action_space.contains(action):
                 logger.warn(f'Action {action} not in action space. Will clip invalid values to interval edges.')
                 action = np.clip(action, self.action_space.low, self.action_space.high)

@@ -29,7 +29,10 @@ The aim is to push an object with one or more movers to the desired goal positio
 detected, if any two movers collide or if at least one mover leaves the tiles (think of this as a collision with a wall). Starting 
 positions of movers and objects, as well as object properties and goal configurations, are randomized at the start of each episode to 
 ensure diverse training scenarios. The agent controls the movers by specifying either the jerk or acceleration. In this environment, 
-positions, velocities, accelerations, and jerks have the units m, m/s, m/s² and m/s³, respectively.
+positions, velocities, accelerations, and jerks have the units m or rad, m/s or rad/s, m/s² or rad/s², and m/s³ or rad/s³, respectively.
+
+The rotation around the z-axis is denoted with :math:`\gamma` in the documentation, but we use c instead of :math:`\gamma` in the code 
+to keep variable names simple.
 
 Observation Space
 -----------------
@@ -39,41 +42,65 @@ The observation space of this environment is a dictionary containing the followi
 ================ =============================================================================================================
 Key              Value
 ================ =============================================================================================================
-observation      - if ``learn_jerk=True``:
-                   a numpy array of shape (num_movers * 6,) containing the (x,y)-position, (x,y)-velocities and
+observation      - if ``learn_jerk=True`` and ``learn_mover_c_rotation=False``:
+                   a numpy array of shape (num_movers * 6,) containing the (x,y)-position, (x,y)-velocities, and
                    (x,y)-accelerations of each mover
-                 - if ``learn_jerk=False``:
+                 - if ``learn_jerk=True`` and ``learn_mover_c_rotation=True``:
+                   a numpy array of shape (num_movers*10,) containing the (x,y)-position, (sin(yaw), cos(yaw)), 
+                   (x,y, :math:`\gamma`)-velocities, and (x,y, :math:`\gamma`)-accelerations of the movers
+                 - if ``learn_jerk=False`` and ``learn_mover_c_rotation=False``:
                    a numpy array of shape (num_movers * 4,) containing the (x,y)-position and (x,y)-velocities of
                    each mover
+                 - if ``learn_jerk=False`` and ``learn_mover_c_rotation=True``:
+                   a numpy array of shape (num_movers*7,) containing the (x,y)-position, (sin(yaw), cos(yaw)),
+                   and (x,y, :math:`\gamma`)-velocities and of the movers
 achieved_goal    - if ``learn_pose=False``:
                    a numpy array of shape (2,) containing the current (x,y)-position of the object
                  - if ``learn_pose=True``:
-                   a numpy array of shape (4,) containing the current (x,y)-position and yaw orientation (sin, cos) of the object
+                   a numpy array of shape (4,) containing the current (x,y)-position and the sine, cosine of the object's yaw
 desired_goal     - if ``learn_pose=False``:
                    a numpy array of shape (2,) containing the desired (x,y)-position of the object
                  - if ``learn_pose=True``:
-                   a numpy array of shape (4,) containing the desired (x,y)-position and yaw orientation (sin, cos) of the object
+                   a numpy array of shape (4,) containing the desired (x,y)-position and the sine, cosine of the object's yaw
 ================ =============================================================================================================
 
 Action Space
 ------------
 
-The action space is continuous and has dimensionality ``num_movers`` * 2. Actions directly specify the desired dynamic values
+The action space is continuous and has dimensionality ``num_movers`` * 2 if ``learn_mover_c_rotation=False``, and ``num_movers`` * 3 otherwise. Actions directly specify the desired dynamic values
 within the configured limits.
 
-If ``learn_jerk=True``, an action
+If ``learn_jerk=True`` and ``learn_mover_c_rotation=False``, an action
 
 .. math::
-    a_j = [a_{j1x}, a_{j1y}, ..., a_{jNx}, a_{jNy}]^T \in [-j_{max}, j_{max}]^{2N}
+    a_j = [a_{j1x}, a_{j1y}, ..., a_{jNx}, a_{jNy}]^T
 
-represents the desired jerks for N movers in x and y directions (unit: m/s³), where ``j_max`` is the maximum possible jerk.
+represents the desired jerks for N movers in x- and y-directions (unit: m/s³).
 
-If ``learn_jerk=False``, an action
+If ``learn_jerk=True`` and ``learn_mover_c_rotation=True``, an action
 
 .. math::
-    a_a = [a_{a1x}, a_{a1y}, ..., a_{aNx}, a_{aNy}]^T \in [-a_{max}, a_{max}]^{2N}
+    a_j = [a_{j1x}, a_{j1y}, a_{j1\gamma}, ..., a_{jNx}, a_{jNy}, a_{jN\gamma}]^T
 
-represents the desired accelerations for N movers in x and y directions (unit: m/s²), where ``a_max`` is the maximum possible acceleration.
+represents the desired jerks for N movers in x- and y-directions (unit: m/s³), as well as the :math:`\gamma`-rotation (unit: rad/s³).
+
+If ``learn_jerk=False`` and ``learn_mover_c_rotation=False``, an action
+
+.. math::
+    a_a = [a_{a1x}, a_{a1y}, ..., a_{aNx}, a_{aNy}]^T
+
+represents the desired accelerations for N movers in x- and y-directions (unit: m/s²).
+
+If ``learn_jerk=False`` and ``learn_mover_c_rotation=True``, an action
+
+.. math::
+    a_a = [a_{a1x}, a_{a1y}, a_{a1\gamma}, ..., a_{aNx}, a_{aNy}, a_{aN\gamma}]^T
+
+represents the desired accelerations for N movers in x- and y-directions (unit: m/s²), as well as the :math:`\gamma`-rotation (unit: rad/s²).
+
+.. note::
+  The individual components of the action vector are limited by the maximum jerks or accelerations: ``j_max_xy``, ``j_max_c``, ``a_max_xy``, and ``a_max_c``. The environment can override 
+  the action input, if a dynamic maximum or the :math:`\gamma`-position limit is violated. Note, however, that these limits—since we use discrete integrator steps—may be slightly violated. 
 
 Immediate Rewards
 -----------------

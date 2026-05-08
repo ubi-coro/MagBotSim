@@ -84,9 +84,16 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         Keys can include 'width', 'height', 'depth', 'segment_width', 'radius', 'mass'. Each value is a tuple (min_value, max_value)
     :param object_sliding_friction: the sliding friction coefficient of the object, defaults to 1.0
     :param object_torsional_friction: the torsional friction coefficient of the object, defaults to 0.005
-    :param v_max: the maximum velocity, defaults to 2.0 [m/s]
-    :param a_max: the maximum acceleration, defaults to 10.0 [m/s²]
-    :param j_max: the maximum jerk (only used if ``learn_jerk=True``), defaults to 100.0 [m/s³]
+    :param v_max_xy: the maximum velocity in x- and y-direction, defaults to 2.0 [m/s]
+    :param a_max_xy: the maximum acceleration in x- and y-direction, defaults to 10.0 [m/s²]
+    :param j_max_xy: the maximum jerk in x- and y-direction (only used if ``learn_jerk=True``), defaults to 100.0 [m/s³]
+    :param learn_mover_c_rotation: whether to learn the mover's c rotation, defaults to False. If False, the mover can only move
+        in x- and y-direction.
+    :param p_max_c: the maximum c-orientation of the mover in rad, defaults to None. The specified limit
+        must satisfy :math:`0<p_{max_c}\\leq\\pi`, but the position limit is symmetric. If None, the mover rotates without position limits.
+    :param v_max_c: the maximum velocity in c, defaults to 122.17305 [rad/s]
+    :param a_max_c: the maximum acceleration in c, defaults to 122.17305 [rad/s²]
+    :param j_max_c: the maximum jerk in c (only used if ``learn_jerk=True``), defaults to 610.86524 [rad/s³]
     :param learn_jerk: whether to learn the jerk, defaults to False. If set to False, the acceleration is learned, i.e. the policy
         output.
     :param learn_pose: whether to learn both position and orientation of the object, defaults to False. If set to False, only
@@ -118,9 +125,14 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         collision_params: dict[str, Any] | None = None,
         object_type: str = 'square_box',
         object_ranges: MutableMapping[str, tuple[float, float]] = DEFAULT_OBJECT_RANGES,
-        v_max: float = 2.0,
-        a_max: float = 10.0,
-        j_max: float = 100.0,
+        v_max_xy: float = 2.0,
+        a_max_xy: float = 10.0,
+        j_max_xy: float = 100.0,
+        learn_mover_c_rotation: bool = False,
+        p_max_c: float | None = None,
+        v_max_c: float = 122.17305,
+        a_max_c: float = 122.17305,
+        j_max_c: float = 610.86524,
         object_sliding_friction: float = 1.0,
         object_torsional_friction: float = 0.005,
         learn_jerk: bool = False,
@@ -137,6 +149,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.num_movers = num_movers
         self.learn_jerk = learn_jerk
         self.learn_pose = learn_pose
+        self.learn_mover_c_rotation = learn_mover_c_rotation
         self.early_termination_steps = early_termination_steps
 
         # tile configuration
@@ -209,39 +222,28 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         )
 
         # maximum velocity, acceleration and jerk
-        self.v_max = v_max
-        self.a_max = a_max
-        self.j_max = j_max
+        self.v_max_xy = v_max_xy
+        self.a_max_xy = a_max_xy
+        self.j_max_xy = j_max_xy
 
-        # observation space
-        max_x = np.max(self.x_pos_tiles) + (self.tile_size[0] / 2)
-        max_y = np.max(self.y_pos_tiles) + (self.tile_size[1] / 2)
+        self.p_max_c = p_max_c
+        if self.p_max_c is not None:
+            assert self.p_max_c <= np.pi, 'p_max_c > pi'
+            assert self.p_max_c >= 0, 'p_max_c < 0'
+        self.v_max_c = v_max_c
+        self.a_max_c = a_max_c
+        self.j_max_c = j_max_c
 
-        if not self.learn_pose:
-            low_goals = np.zeros(2)
-            high_goals = np.array([max_x, max_y])
-        else:
-            low_goals = np.array([0, 0, -1, -1])
-            high_goals = np.array([max_x, max_y, 1, 1])
-
-        self.observation_space = gym.spaces.Dict(
-            {
-                'observation': gym.spaces.Box(
-                    low=-np.inf,
-                    high=np.inf,
-                    shape=(self.num_movers * (2 + int(self.learn_jerk)) * 2,),
-                    dtype=np.float64,
-                ),
-                'achieved_goal': gym.spaces.Box(low=low_goals, high=high_goals, dtype=np.float64),
-                'desired_goal': gym.spaces.Box(low=low_goals, high=high_goals, dtype=np.float64),
-            }
-        )
-
-        action_scale = self.j_max if self.learn_jerk else self.a_max
-        self.action_space = gym.spaces.Box(low=-action_scale, high=action_scale, shape=(self.num_movers * 2,), dtype=np.float64)
+        # mover control
+        self._last_raw_yaw = None
+        self._accumulated_yaw = 0.0
 
         # minimum and maximum possible mover (x,y)-positions
-        safety_margin = self.c_size + self.c_size_offset_wall + self.c_size_offset + 0.03
+        if self.learn_mover_c_rotation:
+            safety_margin = np.broadcast_to(np.atleast_2d(np.linalg.norm(np.atleast_2d(self.c_size), ord=2, axis=1)).T, (num_movers, 1))
+        else:
+            safety_margin = np.broadcast_to(np.atleast_2d(self.c_size), (num_movers, 2))
+        safety_margin = np.max(safety_margin, axis=0) + self.c_size_offset_wall + self.c_size_offset + 0.03
         self.min_xy_pos = np.zeros(2) + safety_margin
         self.max_xy_pos = (
             np.array([np.max(self.x_pos_tiles) + (self.tile_size[0] / 2), np.max(self.y_pos_tiles) + (self.tile_size[1] / 2)])
@@ -257,13 +259,51 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.object_goal_min_xy_pos = self.min_xy_pos + actual_safety_margin
         self.object_goal_max_xy_pos = self.max_xy_pos - actual_safety_margin
 
+        # observation space
+        if not self.learn_pose:
+            low_goals = np.zeros(2)
+            high_goals = self.max_xy_pos
+        else:
+            low_goals = np.array([0, 0, -1, -1])
+            high_goals = np.array(
+                [np.max(self.x_pos_tiles) + (self.tile_size[0] / 2), np.max(self.y_pos_tiles) + (self.tile_size[1] / 2), 1, 1]
+            )
+
+        self.observation_space = gym.spaces.Dict(
+            {
+                'observation': gym.spaces.Box(
+                    low=-np.inf,
+                    high=np.inf,
+                    shape=(
+                        self.num_movers
+                        * (((2 + int(self.learn_jerk)) * (2 + int(self.learn_mover_c_rotation))) + int(self.learn_mover_c_rotation)),
+                    ),
+                    dtype=np.float64,
+                ),
+                'achieved_goal': gym.spaces.Box(low=low_goals, high=high_goals, dtype=np.float64),
+                'desired_goal': gym.spaces.Box(low=low_goals, high=high_goals, dtype=np.float64),
+            }
+        )
+
+        # action space
+        max_xy_action = self.j_max_xy if self.learn_jerk else self.a_max_xy
+        max_c_action = self.j_max_c if self.learn_jerk else self.a_max_c
+        if self.learn_mover_c_rotation:
+            self.action_space = gym.spaces.Box(
+                low=np.array([-max_xy_action, -max_xy_action, -max_c_action] * self.num_movers),
+                high=np.array([max_xy_action, max_xy_action, max_c_action] * self.num_movers),
+                dtype=np.float64,
+            )
+        else:
+            self.action_space = gym.spaces.Box(low=-max_xy_action, high=max_xy_action, shape=(self.num_movers * 2,), dtype=np.float64)
+
         # impedance contoller
         self.impedance_controllers = [
             MoverImpedanceController(
                 model=self.model,
                 mover_joint_name=self.mover_joint_names[mover_idx],
                 mover_half_height=self.mover_size[mover_idx, 2],
-                joint_mask=np.array([0, 0, 1, 1, 1, 1]),
+                joint_mask=np.array([0, 0, 1, 1, 1, int(not self.learn_mover_c_rotation)]),
                 translational_stiffness=np.array([1.0, 1.0, 100.0]),
                 rotational_stiffness=np.array([0.1, 0.1, 1]),
             )
@@ -320,12 +360,20 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         """Update all cached information about MuJoCo actuators, such as names and ids."""
         self.mover_actuator_x_names = mujoco_utils.get_mujoco_type_names(self.model, obj_type='actuator', name_pattern='mover_actuator_x')
         self.mover_actuator_y_names = mujoco_utils.get_mujoco_type_names(self.model, obj_type='actuator', name_pattern='mover_actuator_y')
+        if self.learn_mover_c_rotation:
+            self.mover_actuator_c_names = mujoco_utils.get_mujoco_type_names(
+                self.model, obj_type='actuator', name_pattern='mover_actuator_c'
+            )
 
         self.mover_actuator_x_ids = np.zeros((len(self.mover_actuator_x_names),), dtype=np.int32)
         self.mover_actuator_y_ids = np.zeros((len(self.mover_actuator_x_names),), dtype=np.int32)
+        if self.learn_mover_c_rotation:
+            self.mover_actuator_c_ids = np.zeros((len(self.mover_actuator_x_names),), dtype=np.int32)
         for idx_a, actuator_x_name in enumerate(self.mover_actuator_x_names):
             self.mover_actuator_x_ids[idx_a] = self.model.actuator(actuator_x_name).id
             self.mover_actuator_y_ids[idx_a] = self.model.actuator(self.mover_actuator_y_names[idx_a]).id
+            if self.learn_mover_c_rotation:
+                self.mover_actuator_c_ids[idx_a] = self.model.actuator(self.mover_actuator_c_names[idx_a]).id
 
         for mover_idx in range(self.num_movers):
             self.impedance_controllers[mover_idx].update_cached_mujoco_data(self.model)
@@ -480,9 +528,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
     def _custom_xml_string_callback(self, custom_model_xml_strings: dict | None) -> dict[str, str]:
         """Generate custom XML strings for the environment model.
-
-        This method is called during model initialization to add custom objects and modifications
-        to the base MuJoCo model.
+        This method is called during model initialization to add custom objects and modifications to the base MuJoCo model.
 
         :return: a dict of XML strings to be inserted into the model
         """
@@ -496,7 +542,9 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             for idx_mover in range(self.num_movers):
                 joint_name = self.mover_joint_names[idx_mover]
                 mover_body_id = self.model.joint(joint_name).bodyid[0]
-                mover_mass = self.model.body(mover_body_id).subtreemass[0]
+                mover_body = self.model.body(mover_body_id)
+                mover_mass = mover_body.subtreemass[0]
+                mover_inertia_z = mover_body.inertia[2]
 
                 if self.learn_jerk:
                     mover_actuator_list.extend(
@@ -507,6 +555,13 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                             f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
                         ]
                     )
+                    if self.learn_mover_c_rotation:
+                        mover_actuator_list.extend(
+                            [
+                                f'\t\t<general name="mover_actuator_c_{idx_mover}" joint="{joint_name}" gear="0 0 0 0 0 1" '
+                                f'dyntype="integrator" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none" actearly="true"/>',
+                            ]
+                        )
                 else:
                     mover_actuator_list.extend(
                         [
@@ -516,6 +571,13 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                             f'dyntype="none" gaintype="fixed" gainprm="{mover_mass} 0 0" biastype="none"/>',
                         ]
                     )
+                    if self.learn_mover_c_rotation:
+                        mover_actuator_list.extend(
+                            [
+                                f'\t\t<general name="mover_actuator_c_{idx_mover}" joint="{joint_name}" gear="0 0 0 0 0 1" '
+                                f'dyntype="none" gaintype="fixed" gainprm="{mover_inertia_z} 0 0" biastype="none"/>',
+                            ]
+                        )
 
                 impedance_controller = self.impedance_controllers[idx_mover]
                 mover_actuator_list.append(impedance_controller.generate_actuator_xml_string(idx_mover=idx_mover))
@@ -552,8 +614,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         model. In this environment, it is necessary to reload the model to ensure that the actuators work as expected.
 
         :param mover_start_xy_pos: None or a numpy array of shape (num_movers,2) containing the (x,y) starting positions of each mover,
-            defaults to None. If set to None, the movers will be placed in the center of the tiles that are added to the XML string
-            first.
+            defaults to None. If set to None, the movers will be placed in the center of the tiles that are added to the XML string first.
         """
         custom_model_xml_strings = self._custom_xml_string_callback(
             custom_model_xml_strings=self.custom_model_xml_strings_before_cb,
@@ -590,7 +651,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
     def _sample_position_on_tile(self) -> np.ndarray:
         """Sample a random position within a random valid tile, constrained to not extend beyond tile edges.
 
-        :return: the random position on a tile.
+        :return: the random x-,y-position on a tile. Shape: (2,)
         """
         valid_tiles = np.argwhere(self.layout_tiles == 1)
         tile = valid_tiles[self.np_random.choice(len(valid_tiles))]
@@ -693,6 +754,10 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             )
             self._episode_goal_poly = self._pose_poly(self._episode_base_poly, self._episode_desired_goal)
 
+        # reset mover control vars
+        self._last_raw_yaw = None
+        self._accumulated_yaw = 0.0
+
         # reset corrective movement measurement
         self.cm_measurement.reset()
 
@@ -701,46 +766,119 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.num_elapsed_cycles = 0
         self.success_counter = 0
 
-    def _step_callback(self, action):
+    def _step_callback(self, action) -> np.ndarray:
         """Ensures the maximum dynamics of the actions (accelerations or jerks).
 
-        :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
-        :return: the possibly modified action (shape: (num_movers,2))
+        :param action: a numpy array of shape (num_movers * 2,) if ``learn_mover_c_rotation=False`` else (num_movers * 3,), which
+            specifies the next action (jerk or acceleration)
+        :return: the possibly modified action (shape: (num_movers,2) if ``learn_mover_c_rotation=False`` else (num_movers,3))
         """
-        action = action.reshape((self.num_movers, 2))
+        action = action.reshape((self.num_movers, 3 if self.learn_mover_c_rotation else 2))
 
+        def ensure_max_action_dynamics(action: np.ndarray, max_action_dyn: float) -> np.ndarray:
+            action_norm_tmp = np.linalg.norm(action, ord=2, axis=1)
+            action_norm = np.where(action_norm_tmp <= max_action_dyn, 1.0, action_norm_tmp)[:, None]
+            action_max_vals = np.where(action_norm == 1.0, 1.0, max_action_dyn)
+            action_new = np.divide(action, action_norm) * action_max_vals
+
+            return action_new
+
+        max_dyn_action = np.zeros(action.shape)
         # ensure maximum acceleration or jerk
-        max_action_dyn = self.j_max if self.learn_jerk else self.a_max
-        action_norm_tmp = np.linalg.norm(action, ord=2, axis=1)
-        action_norm = np.where(action_norm_tmp <= max_action_dyn, 1.0, action_norm_tmp)[:, None]
-        action_max_vals = np.where(action_norm == 1.0, 1.0, max_action_dyn)
-        action = np.divide(action, action_norm) * action_max_vals
+        xy_action = action[:, :2]
+        assert xy_action.shape == (self.num_movers, 2)
+        max_xy_action_dyn = self.j_max_xy if self.learn_jerk else self.a_max_xy
+        max_dyn_action[:, :2] = ensure_max_action_dynamics(xy_action, max_xy_action_dyn)
 
-        return action
+        if self.learn_mover_c_rotation:
+            c_action = action[:, 2:]
+            assert c_action.shape == (self.num_movers, 1)
+            max_c_action_dyn = self.j_max_c if self.learn_jerk else self.a_max_c
+            max_dyn_action[:, 2:] = ensure_max_action_dynamics(c_action, max_c_action_dyn)
+
+        return max_dyn_action
 
     def _before_mujoco_step_callback(self, action: np.ndarray) -> None:
         """Apply the next action, i.e. it sets the jerk or acceleration, ensuring the minimum and maximum velocity and acceleration
         (for one cycle).
 
-        :param action: a numpy array of shape (num_movers * 2,), which specifies the next action (jerk or acceleration)
+        :param action: a numpy array of shape (num_movers * 2,) if ``learn_mover_c_rotation=False`` else (num_movers * 3,), which
+            specifies the next action (jerk or acceleration)
         """
-        if action.shape != (self.num_movers, 2):
-            action = action.reshape((self.num_movers, 2))
+        action_shape = (self.num_movers, 3 if self.learn_mover_c_rotation else 2)
+        if action.shape != action_shape:
+            action = action.reshape(action_shape)
 
-        vel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)[:, :2]
+        xy_action = action[:, :2]
+        if self.learn_mover_c_rotation:
+            c_action = action[:, 2:]
+
+        qvel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)
+        xy_vel = qvel[:, :2]
+        c_vel = qvel[:, -1:]
+
+        if self.learn_mover_c_rotation and self.p_max_c is not None:
+            mover_yaw = self._get_accumulated_mover_yaw()
+
         if self.learn_jerk:
-            acc = self.get_mover_qacc(mover_names=self.mover_names, add_noise=False)[:, :2]
-            next_acc_tmp, next_jerk = self.ensure_max_dyn_val(current_values=acc, max_value=self.a_max, next_derivs=action)
-            _, next_acc = self.ensure_max_dyn_val(current_values=vel, max_value=self.v_max, next_derivs=next_acc_tmp)
-            if (next_acc_tmp != next_acc).any():
-                next_jerk = (next_acc - acc) / self.cycle_time
-            ctrl = next_jerk.copy()
-        else:
-            _, next_acc = self.ensure_max_dyn_val(current_values=vel, max_value=self.v_max, next_derivs=action)
-            ctrl = next_acc.copy()
+            qacc = self.get_mover_qacc(mover_names=self.mover_names, add_noise=False)
 
-        self.data.ctrl[self.mover_actuator_x_ids] = ctrl[:, 0]
-        self.data.ctrl[self.mover_actuator_y_ids] = ctrl[:, 1]
+            # xy
+            xy_acc = qacc[:, :2]
+            next_acc_xy_tmp, next_jerk_xy = self.ensure_max_dyn_val(current_values=xy_acc, max_value=self.a_max_xy, next_derivs=xy_action)
+            _, next_acc_xy = self.ensure_max_dyn_val(current_values=xy_vel, max_value=self.v_max_xy, next_derivs=next_acc_xy_tmp)
+            if (next_acc_xy_tmp != next_acc_xy).any():
+                next_jerk_xy = (next_acc_xy - xy_acc) / self.cycle_time
+            xy_ctrl = next_jerk_xy.copy()
+
+            # c
+            if self.learn_mover_c_rotation:
+                c_acc = qacc[:, -1:]
+
+                if self.p_max_c is not None:
+                    braking_dist = ((c_vel**2) / (2 * self.a_max_c)) + 0.05
+                    dist = self.p_max_c - np.abs(mover_yaw)
+                    mask_pos_limit = np.bitwise_and(np.bitwise_and(c_action > 0, mover_yaw > 0), dist < braking_dist)
+                    mask_neg_limit = np.bitwise_and(np.bitwise_and(c_action < 0, mover_yaw < 0), dist < braking_dist)
+                    mask_limit = np.bitwise_or(mask_pos_limit, mask_neg_limit)
+                    v_safe_c = np.minimum(self.v_max_c, np.sqrt(np.maximum(0, 2 * self.a_max_c * dist)) * 0.6)
+                    v_safe_c[np.bitwise_not(mask_limit)] = self.v_max_c
+                else:
+                    v_safe_c = self.v_max_c
+
+                v_pred = c_vel + (c_action * self.cycle_time)
+                next_vel_c = np.clip(v_pred, -v_safe_c, v_safe_c)
+
+                next_acc_c = (next_vel_c - c_vel) / self.cycle_time
+
+                next_jerk_c = np.clip((next_acc_c - c_acc) / self.cycle_time, -self.j_max_c, self.j_max_c)
+                c_ctrl = np.squeeze(next_jerk_c)
+        else:
+            # xy
+            _, next_acc_xy = self.ensure_max_dyn_val(current_values=xy_vel, max_value=self.v_max_xy, next_derivs=xy_action)
+            xy_ctrl = next_acc_xy.copy()
+
+            # c
+            if self.learn_mover_c_rotation:
+                if self.p_max_c is not None:
+                    braking_dist = ((c_vel**2) / (2 * self.a_max_c)) + 0.05
+                    dist = self.p_max_c - np.abs(mover_yaw)
+                    mask_pos_limit = np.bitwise_and(np.bitwise_and(c_action > 0, mover_yaw > 0), dist < braking_dist)
+                    mask_neg_limit = np.bitwise_and(np.bitwise_and(c_action < 0, mover_yaw < 0), dist < braking_dist)
+                    mask_limit = np.bitwise_or(mask_pos_limit, mask_neg_limit)
+                    v_safe_c = np.minimum(self.v_max_c, np.sqrt(np.maximum(0, 2 * self.a_max_c * dist)) * 0.65)
+                    v_safe_c[np.bitwise_not(mask_limit)] = self.v_max_c
+                else:
+                    v_safe_c = self.v_max_c
+
+                next_vel_c = np.clip(c_action * self.cycle_time + c_vel, -v_safe_c, v_safe_c)
+                next_acc_c = (next_vel_c - c_vel) / self.cycle_time
+                c_ctrl = np.squeeze(next_acc_c)
+
+        self.data.ctrl[self.mover_actuator_x_ids] = xy_ctrl[:, 0]
+        self.data.ctrl[self.mover_actuator_y_ids] = xy_ctrl[:, 1]
+        if self.learn_mover_c_rotation:
+            self.data.ctrl[self.mover_actuator_c_ids] = c_ctrl
 
         assert self.impedance_controllers is not None
 
@@ -838,8 +976,8 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
     def _geom_to_shapely(self, geom: np.ndarray) -> sg.Polygon:
         """Convert MuJoCo geometry data to a Shapely polygon.
 
-        :param geom_data: a numpy array containing [type, size_x, size_y, pos_x, pos_y]
-            where type indicates geometry type (6=box, 5=cylinder)
+        :param geom_data: a numpy array containing [type, size_x, size_y, pos_x, pos_y] where type indicates
+            geometry type (6=box, 5=cylinder). Shape: (4,)
         :return: a Shapely Polygon representing the geometry
         """
         type, sx, sy, px, py = geom
@@ -856,14 +994,11 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         return shapely.affinity.translate(shape, px, py)
 
-    def _body_to_shapely(
-        self,
-        geoms: np.ndarray,
-        pose: np.ndarray,
-    ) -> sg.MultiPolygon:
+    def _body_to_shapely(self, geoms: np.ndarray, pose: np.ndarray) -> sg.MultiPolygon:
         """Convert a MuJoCo body to a Shapely polygon representation.
 
         :param body_name: the name of the MuJoCo body to convert
+        :param pose: object pose [x, y, sin(yaw), cos(yaw)]. Shape: (4,)
         :return: a Shapely Polygon representing the union of all geometries in the body
         """
         base_poly = sg.MultiPolygon([self._geom_to_shapely(geoms[i]) for i in range(geoms.shape[0]) if geoms[i].any()])
@@ -873,7 +1008,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         """Apply a pose transformation to a base polygon.
 
         :param base_poly: MultiPolygon in the body's local frame (as returned by _body_to_shapely)
-        :param pose: a numpy array containing [x, y, sin_yaw, cos_yaw]
+        :param pose: a numpy array containing [x, y, sin(yaw), cos(yaw)]. Shape: (4,)
         :return: the base polygon rotated and translated to the given world pose
         """
         x, y, sin_yaw, cos_yaw = pose.squeeze()
@@ -890,20 +1025,15 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             y,
         )
 
-    def _object_coverage(
-        self,
-        achieved_goal: np.ndarray,
-        desired_goal: np.ndarray,
-        object_geoms: np.ndarray,
-    ) -> np.ndarray:
+    def _object_coverage(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, object_geoms: np.ndarray) -> np.ndarray:
         """Calculate the coverage ratio between achieved and desired object poses.
 
         Used in pose learning mode to determine how well the object's current pose
         matches the desired pose by computing the intersection area ratio.
 
-        :param achieved_goal: a numpy array containing the current object pose [x, y, yaw]
-        :param desired_goal: a numpy array containing the target object pose [x, y, yaw]
-        :param object_geoms: a numpy array containing geometry data for the object
+        :param achieved_goal: a numpy array containing the current object pose [x, y, sin(yaw), cos(yaw)]. Shape: (batch_size,4)
+        :param desired_goal: a numpy array containing the target object pose [x, y, sin(yaw), cos(yaw)]. Shape: (batch_size,4)
+        :param object_geoms: a numpy array containing geometry data for the object. Shape: (batch_size,max_num_geoms,5)
         :return: the coverage ratio between 0.0 and 1.0, where 1.0 means perfect overlap
         """
         # Fast path for single-step calls within the current episode.
@@ -954,10 +1084,10 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         - Pose mode (learn_pose=True): Uses coverage ratio threshold
 
         :param achieved_goal: a numpy array containing the current object state. For position mode,
-            shape (2,) with [x, y]. For pose mode, shape (3,) with [x, y, yaw]
+            shape (batch_size,2) with [x, y]. For pose mode, shape (batch_size,4) with [x, y, sin(yaw), cos(yaw)]
         :param desired_goal: a numpy array containing the target object state. Same shape as achieved_goal
         :param object_geoms: a numpy array containing geometry data for the object, defaults to None.
-            Required when learn_pose=True, ignored otherwise
+            Required when learn_pose=True, ignored otherwise. Shape: (batch_size,max_num_geoms,5)
         :return: True if the goal is reached according to the current learning mode, False otherwise. Additionally, the coverage
             (if ``learn_pose=True``) or the distance to the goal (if ``learn_pose=False``) is returned.
         """
@@ -977,12 +1107,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             )
             return dist_goal <= self.max_position_err, dist_goal
 
-    def compute_reward(
-        self,
-        achieved_goal: np.ndarray,
-        desired_goal: np.ndarray,
-        info: dict[str, Any] | None = None,
-    ) -> np.ndarray | float:
+    def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: dict[str, Any] | None = None) -> np.ndarray | float:
         """Compute the immediate reward.
 
         :param achieved_goal: a numpy array of shape (batch_size, length achieved_goal) or (length achieved_goal,) containing the
@@ -1023,25 +1148,64 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
             - 'observation':
 
-                - if ``learn_jerk=True``:
-                    a numpy array of shape (2*2,) containing the (x,y)-position, (x,y)-velocities and (x,y)-accelerations of the mover
-                - if ``learn_jerk=False``:
-                    a numpy array of shape (2,) containing the (x,y)-position and (x,y)-velocities and of the mover
+                - if ``learn_jerk=True`` and ``learn_mover_c_rotation=False``:
+                    a numpy array of shape (num_movers*6,) containing the (x,y)-position, (x,y)-velocities, and (x,y)-accelerations of
+                    the movers
+                - if ``learn_jerk=True`` and ``learn_mover_c_rotation=True``:
+                    a numpy array of shape (num_movers*10,) containing the (x,y)-position, (sin(yaw), cos(yaw)), (x,y,c)-velocities,
+                    and (x,y,c)-accelerations of the movers
+                - if ``learn_jerk=False`` and ``learn_mover_c_rotation=False``:
+                    a numpy array of shape (num_movers*4,) containing the (x,y)-position and (x,y)-velocities of the movers
+                - if ``learn_jerk=False`` and ``learn_mover_c_rotation=True``:
+                    a numpy array of shape (num_movers*7,) containing the (x,y)-position, (sin(yaw), cos(yaw)),
+                    and (x,y,c)-velocities and of the movers
             - 'achieved_goal':
-                a numpy array of shape (2,) containing the current (x,y)-position of the object
+
+                - if ``learn_pose=True``:
+                    a numpy array of shape (4,) containing the current (x,y)-position of the object and the sine and cosine of the
+                    object's yaw
+                - else:
+                    a numpy array of shape (2,) containing the current (x,y)-position of the object
             - 'desired_goal':
-                a numpy array of shape (2,) containing the desired (x,y)-position of the object
+
+                - if ``learn_pose=True``:
+                    a numpy array of shape (4,) containing the desired (x,y)-position of the object and the sine and cosine of the
+                    desired object's yaw
+                - else:
+                    a numpy array of shape (2,) containing the desired (x,y)-position of the object
         """
         # observation
-        mover_xy_pos = self.get_mover_qpos(mover_names=self.mover_names, add_noise=True)[:, :2]
-        mover_xy_velos = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)[:, :2]
+        mover_qpos = self.get_mover_qpos(mover_names=self.mover_names, add_noise=True)
+        mover_qvel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)
+
+        if self.learn_mover_c_rotation:
+            mover_yaw = self._get_yaw_from_qpos(qpos=mover_qpos)
+            mover_pos = np.zeros((mover_qpos.shape[0], 4))
+            mover_pos[:, :2] = mover_qpos[:, :2]
+            mover_pos[:, 2] = np.sin(mover_yaw)
+            mover_pos[:, 3] = np.cos(mover_yaw)
+
+            mover_velos = np.zeros((mover_qpos.shape[0], 3))
+            mover_velos[:, :2] = mover_qvel[:, :2]  # x,y
+            mover_velos[:, 2] = mover_qvel[:, -1]  # c
+        else:
+            mover_pos = mover_qpos[:, :2]
+            mover_velos = mover_qvel[:, :2]
 
         if self.learn_jerk:
             # no noise, because only SetAcc is available in a real system
-            mover_xy_accs = self.get_mover_qacc(mover_names=self.mover_names, add_noise=False)[:, :2]
-            observation = np.concatenate((mover_xy_pos, mover_xy_velos, mover_xy_accs), axis=0)
+            mover_qaccs = self.get_mover_qacc(mover_names=self.mover_names, add_noise=False)
+
+            if self.learn_mover_c_rotation:
+                mover_accs = np.zeros((mover_qpos.shape[0], 3))
+                mover_accs[:, :2] = mover_qaccs[:, :2]  # x,y
+                mover_accs[:, 2] = mover_qaccs[:, -1]  # c
+            else:
+                mover_accs = mover_qaccs[:, :2]
+
+            observation = np.concatenate((mover_pos.flatten(), mover_velos.flatten(), mover_accs.flatten()), axis=0)
         else:
-            observation = np.concatenate((mover_xy_pos, mover_xy_velos), axis=0)
+            observation = np.concatenate((mover_pos.flatten(), mover_velos.flatten()), axis=0)
 
         # achieved goal
         object_qpos = self.data.qpos[self.object_joint_qpos_adr : self.object_joint_qpos_adr + self.object_joint_qpos_ndim]
@@ -1051,8 +1215,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         desired_goal = self.object_xy_goal_pos.copy()
 
         if self.learn_pose:
-            w, x, y, z = object_qpos[3:]
-            object_yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+            object_yaw = np.squeeze(self._get_yaw_from_qpos(qpos=object_qpos))
             achieved_goal = np.append(
                 achieved_goal,
                 [
@@ -1070,6 +1233,37 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                 ('desired_goal', desired_goal),
             ]
         )
+
+    def _get_yaw_from_qpos(self, qpos: np.ndarray) -> np.ndarray:
+        """Caluclate the yaw from a given qpos.
+
+        :param qpos: a numpy array of shape (num_qpos,7) containing the qpos (x_p,y_p,z_p,w_o,x_o,y_o,z_o).
+        :return: the yaw angles calculated from the qpos. Shape: (num_qpos,)
+        """
+        if len(qpos.shape) == 1:
+            qpos = qpos[None, :]
+        assert qpos.shape[1] == 7
+        w, x, y, z = qpos[:, 3], qpos[:, 4], qpos[:, 5], qpos[:, 6]
+        mover_yaw = np.arctan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+        return mover_yaw
+
+    def _get_accumulated_mover_yaw(self):
+        """Calculate the accumulated mover yaw. This is mainly used to handle -pi <-> pi switches.
+
+        :return: the accumulated mover yaw. Shape: (num_movers,1)
+        """
+        qpos = self.get_mover_qpos(mover_names=self.mover_names, add_noise=True)
+        current_raw_yaw = self._get_yaw_from_qpos(qpos=qpos)
+
+        if self._last_raw_yaw is None:
+            self._accumulated_yaw = current_raw_yaw
+        else:
+            diff = current_raw_yaw - self._last_raw_yaw
+            diff = (diff + np.pi) % (2 * np.pi) - np.pi
+            self._accumulated_yaw += diff
+
+        self._last_raw_yaw = current_raw_yaw
+        return self._accumulated_yaw[:, None]
 
     def _geoms(self, name: str) -> np.ndarray:
         """Extract geometry information from a MuJoCo body.
@@ -1123,9 +1317,10 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         :param wall_collision: whether there is a collision between a mover and a wall
         :param other_collision: whether there are other collisions besides wall or mover collisions, e.g. collisions with an obstacle
             (not used in this environment)
-        :param achieved_goal: a numpy array of shape (length achieved_goal,) containing the already achieved (x,y)-position of the
-            object
-        :param desired_goal: a numpy array of shape (length achieved_goal,) containing the desired (x,y)-position of the object
+        :param achieved_goal: a numpy array of shape (length achieved_goal,) containing the already achieved (x,y)-position (and
+            information about c-orientation, if ``learn_pose=True``) of the object
+        :param desired_goal: a numpy array of shape (length achieved_goal,) containing the desired (x,y)-position  (and
+            the desired c-orientation, if ``learn_pose=True``) of the object
         :param collision_info: a dictionary that is intended to contain additional information about collisions, e.g.
             collisions with obstacles. Defaults to None (not used in this environment)
         :return: the info dictionary with keys 'is_success', 'mover_collision' and 'wall_collision'
@@ -1168,21 +1363,22 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
     def ensure_max_dyn_val(self, current_values: np.ndarray, max_value: float, next_derivs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Ensure the minimum and maximum dynamic values per cycle.
 
-        :param current_values: the current velocity or acceleration specified as a numpy array of shape (2,) or
-            (num_checks,2)
+        :param current_values: the current velocity or acceleration specified as a numpy array of shape (dim,) or
+            (num_checks,dim), where dim is the dimension of the dynamic values
         :param max_value: the maximum velocity or acceleration (float)
         :param next_derivs: the next derivative (acceleration or jerk) used for one integrator step specified as a numpy array of
-            shape (2,) or (num_checks,2)
+            shape (dim,) or (num_checks,dim)
         :return: the next velocity or acceleration and the next derivative (acceleration or jerk) corresponding to the next action
-            that must be applied to ensure the minimum and maximum dynamics (each of shape (num_checks,2))
+            that must be applied to ensure the minimum and maximum dynamics (each of shape (num_checks,dim))
         """
         if len(current_values.shape) == 1:
             current_values = current_values.reshape((1, -1))
         if len(next_derivs.shape) == 1:
             next_derivs = next_derivs.reshape((1, -1))
+        assert current_values.shape == next_derivs.shape
 
-        next_values = np.zeros((current_values.shape[0], 2))
-        next_derivs_new = np.zeros((current_values.shape[0], 2))
+        next_values = np.zeros((current_values.shape[0], next_derivs.shape[1]))
+        next_derivs_new = np.zeros((current_values.shape[0], next_derivs.shape[1]))
 
         next_values_tmp = self.cycle_time * next_derivs + current_values
 
@@ -1195,7 +1391,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         if mask_norm.any():
             next_values[mask_norm] = max_value * np.divide(
                 next_values_tmp[mask_norm],
-                np.broadcast_to(norm_next_values_tmp[mask_norm, np.newaxis], (np.sum(mask_norm), 2)),
+                np.broadcast_to(norm_next_values_tmp[mask_norm, np.newaxis], (np.sum(mask_norm), next_derivs.shape[1])),
             )
             next_derivs_new[mask_norm] = (next_values[mask_norm] - current_values[mask_norm]) / self.cycle_time
 
@@ -1217,10 +1413,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         return np.linalg.norm(achieved_goal - desired_goal, ord=2, axis=1)
 
-    def _preprocess_info_dict(
-        self,
-        info: np.ndarray | dict[str, Any] | None,
-    ) -> tuple[int, np.ndarray, np.ndarray, np.ndarray | None]:
+    def _preprocess_info_dict(self, info: np.ndarray | dict[str, Any] | None) -> tuple[int, np.ndarray, np.ndarray, np.ndarray | None]:
         """Extract information about mover collisions, wall collisions and the batch size from the info dictionary.
 
         :param info: the info dictionary or an array of info dictionary to be preprocessed. All dictionaries must contain the keys

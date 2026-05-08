@@ -41,7 +41,7 @@ from magbotsim.rl_envs.trajectory_planning.long_horizon_global_trajectory_planni
         (1, 1.237, -150, 42, True, True),
     ],
 )
-def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y):
+def test_xy_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y):
     env = LongHorizonGlobalTrajectoryPlanningEnv(
         layout_tiles=np.ones((9, 9)),
         num_movers=num_movers,
@@ -51,9 +51,9 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
         std_noise=0.0,
         render_mode=None,
         num_cycles=num_cycles,
-        v_max=0.01,
-        a_max=0.2,
-        j_max=150,
+        v_max_xy=0.01,
+        a_max_xy=0.2,
+        j_max_xy=150,
         learn_jerk=True,
     )
 
@@ -90,8 +90,8 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
         next_j = jerk_arr.reshape((env.num_movers, 2))
         # ensure maximum jerk
         action_norm_tmp = np.linalg.norm(next_j, ord=2, axis=1)
-        action_norm = np.where(action_norm_tmp <= env.j_max, 1.0, action_norm_tmp)[:, None]
-        action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max)
+        action_norm = np.where(action_norm_tmp <= env.j_max_xy, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max_xy)
         next_j = np.divide(next_j, action_norm) * action_max_vals
 
         for idx_mover in range(0, num_movers):
@@ -105,8 +105,8 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
                 a = np.zeros(2)
 
             for _ in range(0, dt):
-                next_a, _ = env.ensure_max_dyn_val(a, env.a_max, next_j[idx_mover, :])
-                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a)
+                next_a, _ = env.ensure_max_dyn_val(a, env.a_max_xy, next_j[idx_mover, :])
+                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max_xy, next_a)
 
                 a = a_tmp.copy()
                 p = timestep * v + p
@@ -132,8 +132,8 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
 
             norm_velo = np.linalg.norm(velo_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
             norm_acc = np.linalg.norm(acc_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
-            assert np.allclose(norm_velo, env.v_max) or float(norm_velo) < env.v_max
-            assert np.allclose(norm_acc, env.a_max) or float(norm_acc) < env.a_max
+            assert np.allclose(norm_velo, env.v_max_xy) or float(norm_velo) < env.v_max_xy
+            assert np.allclose(norm_acc, env.a_max_xy) or float(norm_acc) < env.a_max_xy
 
     env.close()
 
@@ -175,7 +175,7 @@ def test_jerk_actuator(num_movers, mover_mass, jerk, num_cycles, test_x, test_y)
         (1, 1.237, -0.2, 42, True, True),
     ],
 )
-def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, test_y):
+def test_xy_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, test_y):
     env = LongHorizonGlobalTrajectoryPlanningEnv(
         layout_tiles=np.ones((9, 9)),
         num_movers=num_movers,
@@ -185,9 +185,9 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
         std_noise=0.0,
         render_mode=None,
         num_cycles=num_cycles,
-        v_max=0.01,
-        a_max=0.2,
-        j_max=150,
+        v_max_xy=0.01,
+        a_max_xy=0.2,
+        j_max_xy=150,
         learn_jerk=False,
     )
     if num_movers == 1:
@@ -223,8 +223,8 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
         next_a = acc_arr.reshape((env.num_movers, 2))
         # ensure maximum acceleration
         action_norm_tmp = np.linalg.norm(next_a, ord=2, axis=1)
-        action_norm = np.where(action_norm_tmp <= env.a_max, 1.0, action_norm_tmp)[:, None]
-        action_max_vals = np.where(action_norm == 1.0, 1.0, env.a_max)
+        action_norm = np.where(action_norm_tmp <= env.a_max_xy, 1.0, action_norm_tmp)[:, None]
+        action_max_vals = np.where(action_norm == 1.0, 1.0, env.a_max_xy)
         next_a = np.divide(next_a, action_norm) * action_max_vals
 
         for idx_mover in range(0, num_movers):
@@ -238,7 +238,7 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
                 a = np.zeros(2)
 
             for _ in range(0, dt):
-                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a[idx_mover, :])
+                v, a_tmp = env.ensure_max_dyn_val(v, env.v_max_xy, next_a[idx_mover, :])
 
                 a = a_tmp.copy()
                 p = timestep * v + p
@@ -263,8 +263,8 @@ def test_acceleration_actuator(num_movers, mover_mass, acc, num_cycles, test_x, 
 
             norm_velo = np.linalg.norm(velo_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
             norm_acc = np.linalg.norm(acc_mj_actuator[step, 2 * idx_mover : 2 * idx_mover + 2], ord=2)
-            assert np.allclose(norm_velo, env.v_max) or float(norm_velo) < env.v_max
-            assert np.allclose(norm_acc, env.a_max) or float(norm_acc) < env.a_max
+            assert np.allclose(norm_velo, env.v_max_xy) or float(norm_velo) < env.v_max_xy
+            assert np.allclose(norm_acc, env.a_max_xy) or float(norm_acc) < env.a_max_xy
 
     env.close()
 

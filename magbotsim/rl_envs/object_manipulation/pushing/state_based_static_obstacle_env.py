@@ -92,9 +92,9 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         is always rendered after ``num_cycles`` have been executed if ``render_mode != None``.
     :param num_cycles: the number of control cycles for which to apply the same action, defaults to 40
     :param collision_params: _description_, defaults to None
-    :param v_max: the maximum velocity, defaults to 2.0 [m/s]
-    :param a_max: the maximum acceleration, defaults to 10.0 [m/s²]
-    :param j_max: the maximum jerk (only used if ``learn_jerk=True``), defaults to 100.0 [m/s³]
+    :param v_max_xy: the maximum velocity in x- and y-direction, defaults to 2.0 [m/s]
+    :param a_max_xy: the maximum acceleration in x- and y-direction, defaults to 10.0 [m/s²]
+    :param j_max_xy: the maximum jerk in x- and y-direction (only used if ``learn_jerk=True``), defaults to 100.0 [m/s³]
     :param learn_jerk: whether to learn the jerk, defaults to False. If set to False, the acceleration is learned, i.e. the policy
         output.
     :param threshold_pos: the position threshold used to determine whether a mover has reached its goal position, defaults
@@ -113,9 +113,9 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         render_every_cycle: bool = False,
         num_cycles: int = 40,
         collision_params: dict[str, Any] | None = None,
-        v_max: float = 2.0,
-        a_max: float = 10.0,
-        j_max: float = 100.0,
+        v_max_xy: float = 2.0,
+        a_max_xy: float = 10.0,
+        j_max_xy: float = 100.0,
         learn_jerk: bool = False,
         threshold_pos: float = 0.05,
         use_mj_passive_viewer: bool = False,
@@ -133,7 +133,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         # obstacles
         self.obstacle_mode = obstacle_mode
         self.valid_obstacle_modes = ['simple', 'medium', 'hard', 'curriculum', 'random']
-        assert self.obstacle_mode in self.valid_obstacle_modes, logger.error(f"Unkown obstacle mode: '{self.obstacle_mode}'")
+        assert self.obstacle_mode in self.valid_obstacle_modes, f"Unkown obstacle mode: '{self.obstacle_mode}'"
         self.tmp_obstacle_mode = 'simple'  # curriculum learning
         self.ep_counter = 0  # curriculum learning
         self.cl_num_ep_before_incr = 800  # curriculum
@@ -182,9 +182,9 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         )
 
         # maximum velocity, acceleration and jerk
-        self.v_max = v_max
-        self.a_max = a_max
-        self.j_max = j_max
+        self.v_max_xy = v_max_xy
+        self.a_max_xy = a_max_xy
+        self.j_max_xy = j_max_xy
 
         # position threshold in m
         self.threshold_pos = threshold_pos
@@ -205,8 +205,8 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         )
 
         # action space
-        as_low = -self.j_max if self.learn_jerk else -self.a_max
-        as_high = self.j_max if self.learn_jerk else self.a_max
+        as_low = -self.j_max_xy if self.learn_jerk else -self.a_max_xy
+        as_high = self.j_max_xy if self.learn_jerk else self.a_max_xy
         self.action_space = gym.spaces.Box(low=as_low, high=as_high, shape=(self.num_movers * 2,), dtype='float64')
 
         # minimum and maximum possible mover (x,y)-positions
@@ -546,7 +546,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         action = action.reshape((self.num_movers, 2))
 
         # ensure maximum acceleration or jerk
-        max_action_dyn = self.j_max if self.learn_jerk else self.a_max
+        max_action_dyn = self.j_max_xy if self.learn_jerk else self.a_max_xy
         action_norm_tmp = np.linalg.norm(action, ord=2, axis=1)
         action_norm = np.where(action_norm_tmp <= max_action_dyn, 1.0, action_norm_tmp)[:, None]
         action_max_vals = np.where(action_norm == 1.0, 1.0, max_action_dyn)
@@ -566,13 +566,13 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         vel = self.get_mover_qvel(mover_names=self.mover_names, add_noise=True)[:, :2]
         if self.learn_jerk:
             acc = self.get_mover_qacc(mover_names=self.mover_names, add_noise=False)[:, :2]
-            next_acc_tmp, next_jerk = self.ensure_max_dyn_val(current_values=acc, max_value=self.a_max, next_derivs=action)
-            _, next_acc = self.ensure_max_dyn_val(current_values=vel, max_value=self.v_max, next_derivs=next_acc_tmp)
+            next_acc_tmp, next_jerk = self.ensure_max_dyn_val(current_values=acc, max_value=self.a_max_xy, next_derivs=action)
+            _, next_acc = self.ensure_max_dyn_val(current_values=vel, max_value=self.v_max_xy, next_derivs=next_acc_tmp)
             if (next_acc_tmp != next_acc).any():
                 next_jerk = (next_acc - acc) / self.cycle_time
             ctrl = next_jerk.copy()
         else:
-            _, next_acc = self.ensure_max_dyn_val(current_values=vel, max_value=self.v_max, next_derivs=action)
+            _, next_acc = self.ensure_max_dyn_val(current_values=vel, max_value=self.v_max_xy, next_derivs=action)
             ctrl = next_acc.copy()
 
         self.data.ctrl[self.mover_actuator_x_ids] = ctrl[:, 0]

@@ -36,7 +36,7 @@ from magbotsim.rl_envs.object_manipulation.pushing.state_based_static_obstacle_e
         (1.237, -150, 42, True, True),
     ],
 )
-def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
+def test_xy_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
     # environment
     obstacle_mode = 'simple'
     v_max = 0.01  # [m/s]
@@ -66,9 +66,9 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
         render_mode=None,
         render_every_cycle=False,
         num_cycles=num_cycles,
-        v_max=v_max,
-        a_max=a_max,
-        j_max=j_max,
+        v_max_xy=v_max,
+        a_max_xy=a_max,
+        j_max_xy=j_max,
         learn_jerk=learn_jerk,
         threshold_pos=threshold_pos,
         use_mj_passive_viewer=False,
@@ -112,12 +112,12 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
             next_j = jerk_arr.reshape((env.num_movers, 2))
             # ensure maximum jerk
             action_norm_tmp = np.linalg.norm(next_j, ord=2, axis=1)
-            action_norm = np.where(action_norm_tmp <= env.j_max, 1.0, action_norm_tmp)[:, None]
-            action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max)
+            action_norm = np.where(action_norm_tmp <= env.j_max_xy, 1.0, action_norm_tmp)[:, None]
+            action_max_vals = np.where(action_norm == 1.0, 1.0, env.j_max_xy)
             next_j = np.divide(next_j, action_norm) * action_max_vals
 
-            next_a, _ = env.ensure_max_dyn_val(a, env.a_max, next_j)
-            v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a)
+            next_a, _ = env.ensure_max_dyn_val(a, env.a_max_xy, next_j)
+            v, a_tmp = env.ensure_max_dyn_val(v, env.v_max_xy, next_a)
 
             a = a_tmp.copy()
             p = timestep * v + p
@@ -136,8 +136,8 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
 
         norm_velo = np.linalg.norm(velo_mj_actuator[step, :], ord=2)
         norm_acc = np.linalg.norm(acc_mj_actuator[step, :], ord=2)
-        assert np.allclose(norm_velo, env.v_max) or norm_velo < env.v_max
-        assert np.allclose(norm_acc, env.a_max) or norm_acc < env.a_max
+        assert np.allclose(norm_velo, env.v_max_xy) or norm_velo < env.v_max_xy
+        assert np.allclose(norm_acc, env.a_max_xy) or norm_acc < env.a_max_xy
 
     env.close()
 
@@ -175,7 +175,7 @@ def test_jerk_actuator(mover_mass, jerk, num_cycles, test_x, test_y):
         (1.237, -0.2, 42, True, True),
     ],
 )
-def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
+def test_xy_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
     # environment
     obstacle_mode = 'simple'
     v_max = 0.01  # [m/s]
@@ -205,9 +205,9 @@ def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
         render_mode=None,
         render_every_cycle=False,
         num_cycles=num_cycles,
-        v_max=v_max,
-        a_max=a_max,
-        j_max=j_max,
+        v_max_xy=v_max,
+        a_max_xy=a_max,
+        j_max_xy=j_max,
         learn_jerk=learn_jerk,
         threshold_pos=threshold_pos,
         use_mj_passive_viewer=False,
@@ -256,7 +256,7 @@ def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
             action_max_vals = np.where(action_norm == 1.0, 1.0, a_max)
             next_a = np.divide(next_a, action_norm) * action_max_vals
 
-            v, a_tmp = env.ensure_max_dyn_val(v, env.v_max, next_a)
+            v, a_tmp = env.ensure_max_dyn_val(v, env.v_max_xy, next_a)
 
             a = a_tmp.copy()
             p = timestep * v + p
@@ -275,8 +275,8 @@ def test_acceleration_actuator(mover_mass, acc, num_cycles, test_x, test_y):
 
         norm_velo = np.linalg.norm(velo_mj_actuator[step, :], ord=2)
         norm_acc = np.linalg.norm(acc_mj_actuator[step, :], ord=2)
-        assert np.allclose(norm_velo, env.v_max) or norm_velo < env.v_max
-        assert np.allclose(norm_acc, env.a_max) or norm_acc < env.a_max
+        assert np.allclose(norm_velo, env.v_max_xy) or norm_velo < env.v_max_xy
+        assert np.allclose(norm_acc, env.a_max_xy) or norm_acc < env.a_max_xy
 
     env.close()
 
