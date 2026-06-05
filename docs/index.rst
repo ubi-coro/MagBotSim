@@ -23,7 +23,7 @@ A brief summary of our MagBotSim paper `MagBotSim: Physics-Based Simulation and 
    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
 
       <iframe width="888" height="500"
-            src="https://www.youtube.com/embed/JrNsR8JR9yo?autoplay=1&mute=1&loop=1&playlist=JrNsR8JR9yo"
+            src="https://www.youtube.com/embed/UjkYlgBT60U?autoplay=1&mute=1&loop=1&playlist=UjkYlgBT60U"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen></iframe>
