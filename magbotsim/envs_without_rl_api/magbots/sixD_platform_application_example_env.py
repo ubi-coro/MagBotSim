@@ -132,12 +132,12 @@ class SixDPlatformMagBotApplicationExampleEnv(BasicMagBotEnv):
                 # extrusions
                 '\n\t\t<!-- aluminum extrusions and covers -->',
                 '\t\t<body name="aluminum_extrusions" pos="0 0 0" gravcomp="1">',
-                '\t\t\t<geom name="alu_extrusion_0" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="0 0 -0.04" euler="0 0 -1.5708"'
-                'material="gray"/>',
+                '\t\t\t<geom name="alu_extrusion_0" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="0 0 -0.04" '
+                'euler="0 0 -1.5708" material="gray"/>',
                 '\t\t\t<geom name="alu_extrusion_1" type="mesh" mesh="alu_extrusion_short_mesh" mass="1.5" pos="-0.05 -0.05 -0.04" '
                 'material="gray"/>',
-                '\t\t\t<geom name="alu_extrusion_2" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="-0.05 0.77 -0.04"  euler="0 0 -1.5708" '
-                'material="gray"/>',
+                '\t\t\t<geom name="alu_extrusion_2" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="-0.05 0.77 -0.04" '
+                'euler="0 0 -1.5708" material="gray"/>',
                 '\t\t\t<geom name="alu_extrusion_3" type="mesh" mesh="alu_extrusion_short_mesh" mass="1.5" pos="0.96 0 -0.04" '
                 'material="gray"/>',
                 '\t\t\t<geom name="cover_geom_0" type="mesh" mesh="cover_mesh" mass="0.5" pos="-0.05 -0.051 -0.04" euler="0 0 0" '
@@ -319,7 +319,7 @@ if __name__ == '__main__':
         while True:
             platform_pose = env.magbot.get_platform_pose(env.model, env.data, np.array([0]))
 
-            pos_err = np.abs(platform_setpose[:, :3] - platform_pose[:, :3])            
+            pos_err = np.abs(platform_setpose[:, :3] - platform_pose[:, :3])
             if (pos_err < e_threshold).all():
                 if cnt == 0:
                     env.impedance_controllers[0].set_pose_err_scale(err_scale_xy_fast)

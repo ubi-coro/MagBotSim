@@ -188,14 +188,11 @@ class SixDPlatformMagBotsAPM4330:
             if idx_magbot == 0:
                 platform_assets_list = [
                     '\n\t\t<!-- assets 6D-Platform MagBot -->',
-                    # '\t\t<mesh name="mover_to_mount_a" file="./magbots/6D_platform_XPlanar_APM4330/Mover_Adapter.stl" scale="1 1 1" />',
-                    # '\t\t<mesh name="mover_to_mount_b" file="./magbots/6D_platform_XPlanar_APM4330/Mover_Adapter.stl" scale="1 1 1" />',
                     '\t\t<mesh name="mover_adapter" file="./magbots/6D_platform_XPlanar_APM4330/Mover_Adapter.stl" scale="1 1 1" />',
                     '\t\t<mesh name="rail_mount_mesh_a" file="./magbots/6D_platform_XPlanar_APM4330/rail_mount_a.stl" scale="1 1 1" />',
                     '\t\t<mesh name="rail_mount_mesh_b" file="./magbots/6D_platform_XPlanar_APM4330/rail_mount_b.stl" scale="1 1 1" />',
                     '\t\t<mesh name="rotation_plate_mesh" file="./magbots/6D_platform_XPlanar_APM4330/rotation_plate.stl" scale="1 1 1" />',
-                    '\t\t<mesh name="solid_connection" file="./magbots/6D_platform_XPlanar_APM4330/solid_connection.stl" '
-                    'scale="1 1 1" />',
+                    '\t\t<mesh name="solid_connection" file="./magbots/6D_platform_XPlanar_APM4330/solid_connection.stl" scale="1 1 1" />',
                     '\t\t<mesh name="connection_mid_1_mesh" file="./magbots/6D_platform_XPlanar_APM4330/mid_connection.stl" '
                     'scale="1 1 1"/>',
                     '\t\t<mesh name="platform_bottom_mesh" file="./magbots/6D_platform_XPlanar_APM4330/platform_bottom.stl" '
@@ -300,14 +297,14 @@ class SixDPlatformMagBotsAPM4330:
                 '\t\t\t\t\t\t</body>',
                 '\t\t\t\t\t</body>',
                 f'\t\t\t\t\t<body name="solid_connection_0_{idx_magbot}" pos="0.075154 0.0 0.082154" gravcomp="1" euler="0 -0.7854 0">',
-                f'\t\t\t\t\t\t<joint name="solid_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" />',
-                # 'range="-0.3 0.6109"/>',
+                f'\t\t\t\t\t\t<joint name="solid_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" ',
+                'range="-0.3 0.6109"/>',
                 f'\t\t\t\t\t\t<geom name="solid_connection_0_geom_{idx_magbot}" type="mesh" mesh="solid_connection" mass="0.01" pos="0 0 0"'
                 ' material="green"/>',
                 '\t\t\t\t\t</body>',
                 f'\t\t\t\t\t<body name="second_connection_0_{idx_magbot}" pos="0.105154 0.0 0.082154" gravcomp="1" euler="0 -0.7854 0">',
-                f'\t\t\t\t\t\t<joint name="second_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" />',
-                # ' range="-0.3 0.6109"/>',
+                f'\t\t\t\t\t\t<joint name="second_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" ',
+                ' range="-0.3 0.6109"/>',
                 f'\t\t\t\t\t\t<geom name="second_connection_0_geom_{idx_magbot}" type="mesh" mesh="connection_mid_1_mesh" mass="0.01" '
                 'pos="0 0 0" material="green"/>',
                 f'\t\t\t\t\t\t<body name="platform_bottom_{idx_magbot}" pos="0.10699 0 -0.02903" gravcomp="1" euler="0 0.7854 0">',
