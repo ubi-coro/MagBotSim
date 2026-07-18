@@ -1,6 +1,15 @@
 Changelog
 =========
 
+Release v1.2.0 (2026-07-18)
+---------------------------
+
+Bug Fixes
+^^^^^^^^^
+1. Fixed wrong joint position in 6D-Platform MagBot model.
+2. Fixed wrong offset in 6D-Platform MagBot model.
+3. Updated stl files for 6D-Platform MagBot model.
+
 Release v1.1.0 (2026-05-08)
 ---------------------------
 

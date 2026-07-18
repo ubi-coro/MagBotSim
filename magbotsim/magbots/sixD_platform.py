@@ -1,3 +1,7 @@
+##########################################################
+# Copyright (c) 2026 Lara Bergmann, Bielefeld University #
+##########################################################
+
 import numpy as np
 import mujoco
 from mujoco import MjModel, MjData
@@ -184,37 +188,38 @@ class SixDPlatformMagBotsAPM4330:
             if idx_magbot == 0:
                 platform_assets_list = [
                     '\n\t\t<!-- assets 6D-Platform MagBot -->',
-                    '\t\t<mesh name="mover_to_mount_a" file="./magbots/6D_platform_XPlanar_APM4330/mover_to_mount_b.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="mover_to_mount_b" file="./magbots/6D_platform_XPlanar_APM4330/mover_to_mount_a.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="rail_mount_mesh_a" file="./magbots/6D_platform_XPlanar_APM4330/rail_mount_a.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="rail_mount_mesh_b" file="./magbots/6D_platform_XPlanar_APM4330/rail_mount_b.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="rotation_plate_mesh" file="./magbots/6D_platform_XPlanar_APM4330/rotation_plate.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="solid_connection" file="./magbots/6D_platform_XPlanar_APM4330/solid_connection_v2.STL" '
+                    # '\t\t<mesh name="mover_to_mount_a" file="./magbots/6D_platform_XPlanar_APM4330/Mover_Adapter.stl" scale="1 1 1" />',
+                    # '\t\t<mesh name="mover_to_mount_b" file="./magbots/6D_platform_XPlanar_APM4330/Mover_Adapter.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="mover_adapter" file="./magbots/6D_platform_XPlanar_APM4330/Mover_Adapter.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="rail_mount_mesh_a" file="./magbots/6D_platform_XPlanar_APM4330/rail_mount_a.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="rail_mount_mesh_b" file="./magbots/6D_platform_XPlanar_APM4330/rail_mount_b.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="rotation_plate_mesh" file="./magbots/6D_platform_XPlanar_APM4330/rotation_plate.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="solid_connection" file="./magbots/6D_platform_XPlanar_APM4330/solid_connection.stl" '
                     'scale="1 1 1" />',
-                    '\t\t<mesh name="connection_mid_1_mesh" file="./magbots/6D_platform_XPlanar_APM4330/mid_connection_v2.STL" '
+                    '\t\t<mesh name="connection_mid_1_mesh" file="./magbots/6D_platform_XPlanar_APM4330/mid_connection.stl" '
                     'scale="1 1 1"/>',
-                    '\t\t<mesh name="platform_bottom_mesh" file="./magbots/6D_platform_XPlanar_APM4330/platform_bottom.STL" '
+                    '\t\t<mesh name="platform_bottom_mesh" file="./magbots/6D_platform_XPlanar_APM4330/platform_bottom.stl" '
                     'scale="1 1 1" />',
-                    '\t\t<mesh name="platform_top_mesh" file="./magbots/6D_platform_XPlanar_APM4330/platform_top.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="ball_stud_mesh" file="./magbots/6D_platform_XPlanar_APM4330/ball_stud.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="ball_socket_mesh" file="./magbots/6D_platform_XPlanar_APM4330/ball_socket.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="flange_coupling_mesh" file="./magbots/6D_platform_XPlanar_APM4330/flange_coupling_M6.STL" '
+                    '\t\t<mesh name="platform_top_mesh" file="./magbots/6D_platform_XPlanar_APM4330/platform_top.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="ball_stud_mesh" file="./magbots/6D_platform_XPlanar_APM4330/ball_stud.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="ball_socket_mesh" file="./magbots/6D_platform_XPlanar_APM4330/ball_socket.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="flange_coupling_mesh" file="./magbots/6D_platform_XPlanar_APM4330/flange_coupling_M6.stl" '
                     'scale="1 1 1"/>',
-                    '\t\t<mesh name="ball_stud_m4_mesh" file="./magbots/6D_platform_XPlanar_APM4330/ball_stud_M4.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="linear_coupling_mesh" file="./magbots/6D_platform_XPlanar_APM4330/linear_coupling_M4.STL" '
+                    '\t\t<mesh name="ball_stud_m4_mesh" file="./magbots/6D_platform_XPlanar_APM4330/ball_stud_M4.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="linear_coupling_mesh" file="./magbots/6D_platform_XPlanar_APM4330/linear_coupling_M4.stl" '
                     'scale="1 1 1" />',
-                    '\t\t<mesh name="toothed_rack_mesh" file="./magbots/6D_platform_XPlanar_APM4330/toothed_rack.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="bevel_gear_mesh" file="./magbots/6D_platform_XPlanar_APM4330/bevel_gear.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="spur_gear_mesh" file="./magbots/6D_platform_XPlanar_APM4330/spur_gear.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="gliding_bearing_mesh" file="./magbots/6D_platform_XPlanar_APM4330/gliding_bearing_toothed_rack.STL" '
+                    '\t\t<mesh name="toothed_rack_mesh" file="./magbots/6D_platform_XPlanar_APM4330/toothed_rack.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="bevel_gear_mesh" file="./magbots/6D_platform_XPlanar_APM4330/bevel_gear.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="spur_gear_mesh" file="./magbots/6D_platform_XPlanar_APM4330/spur_gear.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="gliding_bearing_mesh" file="./magbots/6D_platform_XPlanar_APM4330/gliding_bearing_toothed_rack.stl" '
                     'scale="1 1 1" />',
-                    '\t\t<mesh name="GT2_Pulley_mesh" file="./magbots/6D_platform_XPlanar_APM4330/GT2_Pulley_5mm_Bore.STL" scale="1 1 1"/>',
-                    '\t\t<mesh name="shaft_5mm_short_mesh" file="./magbots/6D_platform_XPlanar_APM4330/shaft_5mm_short.STL" '
+                    '\t\t<mesh name="GT2_Pulley_mesh" file="./magbots/6D_platform_XPlanar_APM4330/GT2_pulley.stl" scale="1 1 1"/>',
+                    '\t\t<mesh name="shaft_5mm_short_mesh" file="./magbots/6D_platform_XPlanar_APM4330/shaft_5mm_short.stl" '
                     'scale="1 1 1"/>',
-                    '\t\t<mesh name="shaft_5mm_long_mesh" file="./magbots/6D_platform_XPlanar_APM4330/shaft_5mm_long.STL" scale="1 1 1" />',
-                    '\t\t<mesh name="toothed_belt_short_mesh" file="./magbots/6D_platform_XPlanar_APM4330/toothed_belt_short.STL" '
+                    '\t\t<mesh name="shaft_5mm_long_mesh" file="./magbots/6D_platform_XPlanar_APM4330/shaft_5mm_long.stl" scale="1 1 1" />',
+                    '\t\t<mesh name="toothed_belt_short_mesh" file="./magbots/6D_platform_XPlanar_APM4330/toothed_belt_short.stl" '
                     'scale="1 1 1" />',
-                    '\t\t<mesh name="toothed_belt_long_mesh" file="./magbots/6D_platform_XPlanar_APM4330/toothed_belt_long.STL" '
+                    '\t\t<mesh name="toothed_belt_long_mesh" file="./magbots/6D_platform_XPlanar_APM4330/toothed_belt_long.stl" '
                     'scale="1 1 1" />',
                 ]
                 platform_assets_xml_str = '\n'.join(platform_assets_list)
@@ -230,8 +235,8 @@ class SixDPlatformMagBotsAPM4330:
             assert isinstance(mover_body_xml_strs, list), 'custom_mover_body_xml_str_list must be a list'
             # mover a
             mover_body_a_list = [
-                f'\n\t\t\t<body name="m_{self.indices_mover_a[idx_magbot]}_rail" pos="0 0 0.006" gravcomp="1" euler="0 0 0">',
-                f'\t\t\t\t<geom name="m_{self.indices_mover_a[idx_magbot]}_to_mount_geom" type="mesh" mesh="mover_to_mount_a" mass="0.065" '
+                f'\n\t\t\t<body name="m_{self.indices_mover_a[idx_magbot]}_rail" pos="0 0 0.006" gravcomp="1" euler="0 0 -1.5708">',
+                f'\t\t\t\t<geom name="m_{self.indices_mover_a[idx_magbot]}_to_mount_geom" type="mesh" mesh="mover_adapter" mass="0.065" '
                 'pos="0 0 0" material="green"/>',
                 f'\t\t\t\t<site name="m_{self.indices_mover_a[idx_magbot]}_rail_site" pos="0 0 0" euler="0 0 -1.5708" size="0.001" '
                 'type="sphere"/>',
@@ -242,7 +247,7 @@ class SixDPlatformMagBotsAPM4330:
             # mover b
             mover_body_b_list = [
                 f'\n\t\t\t<body name="m_{self.indices_mover_b[idx_magbot]}_rail" pos="0 0 0.006" gravcomp="1" euler="0 0 1.5708">',
-                f'\t\t\t\t<geom name="m_{self.indices_mover_b[idx_magbot]}_to_mount_geom" type="mesh" mesh="mover_to_mount_b" mass="0.065" '
+                f'\t\t\t\t<geom name="m_{self.indices_mover_b[idx_magbot]}_to_mount_geom" type="mesh" mesh="mover_adapter" mass="0.065" '
                 'pos="0 0 0" material="green"/>',
                 f'\t\t\t\t<site name="m_{self.indices_mover_b[idx_magbot]}_rail_site" pos="0 0 0" size="0.001" type="sphere"/>',
                 '\t\t\t</body>',
@@ -295,14 +300,14 @@ class SixDPlatformMagBotsAPM4330:
                 '\t\t\t\t\t\t</body>',
                 '\t\t\t\t\t</body>',
                 f'\t\t\t\t\t<body name="solid_connection_0_{idx_magbot}" pos="0.075154 0.0 0.082154" gravcomp="1" euler="0 -0.7854 0">',
-                f'\t\t\t\t\t\t<joint name="solid_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.09299 0 0" damping="0" '
-                'range="-0.3 0.6109"/>',
+                f'\t\t\t\t\t\t<joint name="solid_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" />',
+                # 'range="-0.3 0.6109"/>',
                 f'\t\t\t\t\t\t<geom name="solid_connection_0_geom_{idx_magbot}" type="mesh" mesh="solid_connection" mass="0.01" pos="0 0 0"'
                 ' material="green"/>',
                 '\t\t\t\t\t</body>',
                 f'\t\t\t\t\t<body name="second_connection_0_{idx_magbot}" pos="0.105154 0.0 0.082154" gravcomp="1" euler="0 -0.7854 0">',
-                f'\t\t\t\t\t\t<joint name="second_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.09299 0 0" damping="0"'
-                ' range="-0.3 0.6109"/>',
+                f'\t\t\t\t\t\t<joint name="second_connection_0_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" />',
+                # ' range="-0.3 0.6109"/>',
                 f'\t\t\t\t\t\t<geom name="second_connection_0_geom_{idx_magbot}" type="mesh" mesh="connection_mid_1_mesh" mass="0.01" '
                 'pos="0 0 0" material="green"/>',
                 f'\t\t\t\t\t\t<body name="platform_bottom_{idx_magbot}" pos="0.10699 0 -0.02903" gravcomp="1" euler="0 0.7854 0">',
@@ -356,7 +361,7 @@ class SixDPlatformMagBotsAPM4330:
                 ' pos="0 0 0" material="green"/>',
                 '\t\t\t\t\t\t\t</body>',
                 f'\t\t\t\t\t\t\t<body name="toothed_rack_A_rot_{idx_magbot}" pos="0.0012 0.0772 0.0433" gravcomp="1" euler="0 0 -1.5708">',
-                f'\t\t\t\t\t\t\t\t<joint name="toothed_rack_A_rot_joint_{idx_magbot}" type="slide" axis="0 0 1" pos="0 0 0" damping="0.1" '
+                f'\t\t\t\t\t\t\t\t<joint name="toothed_rack_A_rot_joint_{idx_magbot}" type="slide" axis="0 0 1" pos="0 0 0" damping="0.1" ',
                 'limited="true" range="-0.022 0.02818"/>',
                 f'\t\t\t\t\t\t\t\t<geom name="toothed_rack_A_rot_geom_{idx_magbot}" type="mesh" mesh="toothed_rack_mesh" mass="0.01" '
                 'pos="0 0 0" material="off_white"/>',
@@ -372,7 +377,7 @@ class SixDPlatformMagBotsAPM4330:
                 ' pos="0 0 0" material="green"/>',
                 '\t\t\t\t\t\t\t</body>',
                 f'\t\t\t\t\t\t\t<body name="toothed_rack_B_rot_{idx_magbot}" pos="-0.0745 0.0008 0.0433" gravcomp="1" euler="0 0 1.5708">',
-                f'\t\t\t\t\t\t\t\t<joint name="toothed_rack_B_rot_joint_{idx_magbot}" type="slide" axis="0 0 1" pos="0 0 0" damping="0.1" '
+                f'\t\t\t\t\t\t\t\t<joint name="toothed_rack_B_rot_joint_{idx_magbot}" type="slide" axis="0 0 1" pos="0 0 0" damping="0.1" ',
                 'limited="true" range="-0.022 0.02818"/>',
                 f'\t\t\t\t\t\t\t\t<geom name="toothed_rack_B_rot_geom_{idx_magbot}" type="mesh" mesh="toothed_rack_mesh" mass="0.01" '
                 'pos="0 0 0" material="off_white"/>',
@@ -385,7 +390,7 @@ class SixDPlatformMagBotsAPM4330:
                 f'\t\t\t\t\t\t\t<body name="flange_coupling_{idx_magbot}" pos="0.0 0.0 0.017" gravcomp="1">',
                 f'\t\t\t\t\t\t\t\t<geom name="flange_coupling_geom_{idx_magbot}" type="mesh" mesh="flange_coupling_mesh" mass="0.01" '
                 'pos="0 0 0" material="gray"/>',
-                f'\t\t\t\t\t\t\t\t<body name="ball_stud_{idx_magbot}" pos="0.0 0.0 0.0077" gravcomp="1">',
+                f'\t\t\t\t\t\t\t\t<body name="ball_stud_{idx_magbot}" pos="0.0 0.0 0.005" gravcomp="1">',
                 f'\t\t\t\t\t\t\t\t\t<geom name="ball_stud_geom_{idx_magbot}" type="mesh" mesh="ball_stud_mesh" mass="0.01" pos="0 0 0" '
                 'material="gray"/>',
                 f'\t\t\t\t\t\t\t\t\t<body name="ball_socket_{idx_magbot}" pos="0.0 0.0 0.0215" gravcomp="1">',
@@ -399,7 +404,7 @@ class SixDPlatformMagBotsAPM4330:
                 f'\t\t\t\t\t\t\t\t\t\t\t<site name="platform_pose_site_{idx_magbot}" pos="0 0 0.004" euler="0 0 1.5708" size="0.001" '
                 'type="sphere" rgba="1 0 0 0"/>',
                 f'\t\t\t\t\t\t\t\t\t\t\t<body name="guide_A_{idx_magbot}" pos="0 0 0">',
-                f'\t\t\t\t\t\t\t\t\t\t\t\t<joint name="linear_coupling_A_slide_{idx_magbot}" type="slide" axis="1 0 0" damping="0.1" '
+                f'\t\t\t\t\t\t\t\t\t\t\t\t<joint name="linear_coupling_A_slide_{idx_magbot}" type="slide" axis="1 0 0" damping="0.1" ',
                 'range="-0.0045 0.0045"/>',
                 f'\t\t\t\t\t\t\t\t\t\t\t\t<body name="linear_coupling_A_{idx_magbot}" pos="0.077 -0.001 -0.004" euler="0 0 1.5708" '
                 'gravcomp="1">',
@@ -409,7 +414,7 @@ class SixDPlatformMagBotsAPM4330:
                 '\t\t\t\t\t\t\t\t\t\t\t\t</body>',
                 '\t\t\t\t\t\t\t\t\t\t\t</body>',
                 f'\t\t\t\t\t\t\t\t\t\t\t<body name="guide_B_{idx_magbot}" pos="0 0 0">',
-                f'\t\t\t\t\t\t\t\t\t\t\t\t<joint name="linear_coupling_B_slide_{idx_magbot}" type="slide" axis="0 1 0" damping="0.1" '
+                f'\t\t\t\t\t\t\t\t\t\t\t\t<joint name="linear_coupling_B_slide_{idx_magbot}" type="slide" axis="0 1 0" damping="0.1" ',
                 'range="-0.0045 0.0045"/>',
                 f'\t\t\t\t\t\t\t\t\t\t\t\t<body name="linear_coupling_B_{idx_magbot}" pos="0.0008 0.0748 -0.004" euler="0 0 0" '
                 'gravcomp="1">',
@@ -460,7 +465,7 @@ class SixDPlatformMagBotsAPM4330:
                 '\t\t\t\t\t\t</body>',
                 '\t\t\t\t\t</body>',
                 f'\t\t\t\t\t<body name="solid_connection_1_{idx_magbot}" pos="0.075154 0.0 0.082154" gravcomp="1" euler="0 -0.7854 0">',
-                f'\t\t\t\t\t\t<joint name="solid_connection_1_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.09299 0 0" damping="0" '
+                f'\t\t\t\t\t\t<joint name="solid_connection_1_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" ',
                 'range="-0.3 0.6109"/>',
                 f'\t\t\t\t\t\t<geom name="solid_connection_geom_1_1_{idx_magbot}" type="mesh" mesh="solid_connection" mass="0.01" '
                 'pos="0 0 0" material="green"/>',
@@ -468,7 +473,7 @@ class SixDPlatformMagBotsAPM4330:
                 f'\t\t\t\t\t\t<site name="sc1_hinge_m_{idx_magbot}" pos="0.078 0.05123 0" size="0.001" type="sphere"/>',
                 '\t\t\t\t\t</body>',
                 f'\t\t\t\t\t<body name="second_connection_1_{idx_magbot}" pos="0.105154 0.0 0.082154" gravcomp="1" euler="0 -0.7854 0">',
-                f'\t\t\t\t\t\t<joint name="second_connection_1_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.09299 0 0" damping="0"'
+                f'\t\t\t\t\t\t<joint name="second_connection_1_joint_{idx_magbot}" type="hinge" axis="0 1 0" pos="-0.078 0 0" damping="0" ',
                 ' range="-0.3 0.6109"/>',
                 f'\t\t\t\t\t\t<geom name="second_connection_1_geom_{idx_magbot}" type="mesh" mesh="connection_mid_1_mesh" mass="0.01" '
                 'pos="0 0 0" material="green"/>',
@@ -502,6 +507,8 @@ class SixDPlatformMagBotsAPM4330:
                 f'\t\t<exclude body1="gliding_bearing_rack_A_{idx_magbot}" body2="toothed_rack_A_rot_{idx_magbot}"/>',
                 f'\t\t<exclude body1="gliding_bearing_rack_B_{idx_magbot}" body2="toothed_rack_B_rot_{idx_magbot}"/>',
                 f'\t\t<exclude body1="second_connection_0_{idx_magbot}" body2="gliding_bearing_rack_B_{idx_magbot}"/>',
+                f'\t\t<exclude body1="solid_connection_0_{idx_magbot}" body2="toothed_belt_long_B_{idx_magbot}"/>',
+                f'\t\t<exclude body1="solid_connection_1_{idx_magbot}" body2="toothed_belt_long_A_{idx_magbot}"/>',
                 f'\t\t<exclude body1="solid_connection_0_{idx_magbot}" body2="gliding_bearing_rack_B_{idx_magbot}"/>',
                 f'\t\t<exclude body1="toothed_belt_long_B_{idx_magbot}" body2="gt2_pulley_B_1_{idx_magbot}"/>',
                 f'\t\t<exclude body1="toothed_belt_long_B_{idx_magbot}" body2="shaft_B_1_{idx_magbot}"/>',
@@ -514,6 +521,9 @@ class SixDPlatformMagBotsAPM4330:
                 f'\t\t<exclude body1="toothed_belt_short_A_{idx_magbot}" body2="platform_bottom_{idx_magbot}"/>',
                 f'\t\t<exclude body1="toothed_belt_short_A_{idx_magbot}" body2="solid_connection_1_{idx_magbot}"/>',
                 f'\t\t<exclude body1="spur_gear_B_{idx_magbot}" body2="solid_connection_0_{idx_magbot}"/>',
+                f'\t\t<exclude body1="gt2_pulley_B_1_{idx_magbot}" body2="solid_connection_0_{idx_magbot}"/>',
+                f'\t\t<exclude body1="gt2_pulley_A_1_{idx_magbot}" body2="solid_connection_1_{idx_magbot}"/>',
+                f'\t\t<exclude body1="gt2_pulley_A_2_{idx_magbot}" body2="solid_connection_1_{idx_magbot}"/>',
                 f'\t\t<exclude body1="rail_mount_0_{idx_magbot}" body2="rotation_plate_0_{idx_magbot}"/>',
                 f'\t\t<exclude body1="rail_mount_0_{idx_magbot}" body2="bevel_gear_A_0_{idx_magbot}"/>',
                 f'\t\t<exclude body1="rail_mount_1_{idx_magbot}" body2="rotation_plate_1_{idx_magbot}"/>',
@@ -544,9 +554,9 @@ class SixDPlatformMagBotsAPM4330:
                 f'\t\t<connect site1="pb_hinge_p_{idx_magbot}" site2="sc1_hinge_p_{idx_magbot}" solref="0.005 1" solimp="0.9 0.95 0.001"/>',
                 f'\t\t<connect site1="pb_hinge_m_{idx_magbot}" site2="sc1_hinge_m_{idx_magbot}" solref="0.005 1" solimp="0.9 0.95 0.001"/>',
                 f'\t\t<connect site1="m_{self.indices_mover_a[idx_magbot]}_rail_site" site2="rail_mount_1_site_{idx_magbot}" '
-                'solref="0.005 1" solimp="0.9 0.95 0.001"/>',
+                'solref="0.001 1" solimp="0.9999 0.9999 0.001"/>',
                 f'\t\t<connect site1="m_{self.indices_mover_b[idx_magbot]}_rail_site" site2="rail_mount_0_site_{idx_magbot}" '
-                'solref="0.005 1" solimp="0.9 0.95 0.001"/>',
+                'solref="0.001 1" solimp="0.9999 0.9999 0.001"/>',
                 '\t</equality>',
             ]
             equality_xml_str = '\n'.join(equality_list)

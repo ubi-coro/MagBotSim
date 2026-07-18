@@ -24,6 +24,8 @@ picked up by the mover using a docking station. The platform of the MagBot is co
 To enable the development of motion planning approaches for Magnetic Robotics, a MuJoCo model of the 6D-Platform MagBot 
 is integrated in the MagBotSim together with the inverse kinematics controller.
 
+The 6D-Platform MagBot was introduced in our paper `From Transportation to Manipulation: Transforming Magnetic Levitation to Magnetic Robotics <https://doi.org/10.48550/arXiv.2603.01982>`_.
+
 API References
 --------------
 The API references can be found here: :ref:`sixD_platform_magbot_api_reference`.

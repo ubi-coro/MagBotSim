@@ -1,3 +1,7 @@
+##########################################################
+# Copyright (c) 2026 Lara Bergmann, Bielefeld University #
+##########################################################
+
 import numpy as np
 import mujoco
 from magbotsim import BasicMagBotEnv, SixDPlatformMagBotsAPM4330, MoverImpedanceController

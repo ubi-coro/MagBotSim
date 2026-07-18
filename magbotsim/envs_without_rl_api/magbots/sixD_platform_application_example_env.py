@@ -1,3 +1,7 @@
+##########################################################
+# Copyright (c) 2026 Lara Bergmann, Bielefeld University #
+##########################################################
+
 import numpy as np
 import mujoco
 from magbotsim import BasicMagBotEnv, SixDPlatformMagBotsAPM4330, MoverImpedanceController
@@ -59,7 +63,7 @@ class SixDPlatformMagBotApplicationExampleEnv(BasicMagBotEnv):
                 mover_joint_name=self.mover_joint_names[mover_idx],
                 mover_half_height=self.mover_size[mover_idx, 2],
                 joint_mask=np.array([1, 1, 1, 1, 1, 1]),
-                translational_stiffness=np.array([50.0, 50.0, 50.0]),
+                translational_stiffness=np.array([60.0, 60.0, 50.0]),
                 rotational_stiffness=np.array([1.0, 1.0, 5.0]),
             )
             for mover_idx in range(self.num_movers)
@@ -107,18 +111,17 @@ class SixDPlatformMagBotApplicationExampleEnv(BasicMagBotEnv):
             application_assets_list = [
                 # extrusions
                 '\n\t\t<!-- assets application example -->',
-                '\t\t<mesh name="alu_extrusion_short_mesh" file="./misc/6D_platform_application_example/50x100_770.STL" scale="1 1 1" />',
-                '\t\t<mesh name="alu_extrusion_long_mesh" file="./misc/6D_platform_application_example/50x100_1010.STL" scale="1 1 1" />',
-                '\t\t<mesh name="cover_mesh" file="./misc/6D_platform_application_example/cover.STL" scale="1 1 1" />',
-                # containter, supply station, and product
-                '\t\t<mesh name="product_mesh" file="./misc/6D_platform_application_example/product.STL" scale="1 1 1" />',
-                '\t\t<mesh name="supply_rack_left_mesh" file="./misc/6D_platform_application_example/supply_rack_left.STL" scale="1 1 1"/>',
-                '\t\t<mesh name="supply_rack_right_mesh" file="./misc/6D_platform_application_example/supply_rack_right.STL" '
+                '\t\t<mesh name="alu_extrusion_short_mesh" file="./misc/6D_platform_application_example/50x100_770.stl" scale="1 1 1" />',
+                '\t\t<mesh name="alu_extrusion_long_mesh" file="./misc/6D_platform_application_example/50x100_1010.stl" scale="1 1 1" />',
+                '\t\t<mesh name="cover_mesh" file="./misc/6D_platform_application_example/cover.stl" scale="1 1 1" />',
+                # containter and product
+                '\t\t<mesh name="supply_rack_left_mesh" file="./misc/6D_platform_application_example/supply_rack_left.stl" scale="1 1 1"/>',
+                '\t\t<mesh name="supply_rack_right_mesh" file="./misc/6D_platform_application_example/supply_rack_right.stl" '
                 'scale="1 1 1"/>',
-                '\t\t<mesh name="spacer_mesh" file="./misc/6D_platform_application_example/spacer.STL" scale="1 1 1" />',
-                '\t\t<mesh name="container_front_mesh" file="./misc/6D_platform_application_example/container_front.STL" scale="1 1 1" />',
-                '\t\t<mesh name="container_side_mesh" file="./misc/6D_platform_application_example/container_side.STL" scale="1 1 1" />',
-                '\t\t<mesh name="container_back_mesh" file="./misc/6D_platform_application_example/container_back.STL" scale="1 1 1" />',
+                '\t\t<mesh name="spacer_mesh" file="./misc/6D_platform_application_example/spacer.stl" scale="1 1 1" />',
+                '\t\t<mesh name="container_front_mesh" file="./misc/6D_platform_application_example/container_front.stl" scale="1 1 1" />',
+                '\t\t<mesh name="container_side_mesh" file="./misc/6D_platform_application_example/container_side.stl" scale="1 1 1" />',
+                '\t\t<mesh name="container_back_mesh" file="./misc/6D_platform_application_example/container_back.stl" scale="1 1 1" />',
             ]
             application_assets_xml_str = '\n'.join(application_assets_list)
             custom_assets_xml_str += application_assets_xml_str
@@ -129,11 +132,11 @@ class SixDPlatformMagBotApplicationExampleEnv(BasicMagBotEnv):
                 # extrusions
                 '\n\t\t<!-- aluminum extrusions and covers -->',
                 '\t\t<body name="aluminum_extrusions" pos="0 0 0" gravcomp="1">',
-                '\t\t\t<geom name="alu_extrusion_0" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="0 -0.05 -0.04" '
+                '\t\t\t<geom name="alu_extrusion_0" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="0 0 -0.04" euler="0 0 -1.5708"'
                 'material="gray"/>',
                 '\t\t\t<geom name="alu_extrusion_1" type="mesh" mesh="alu_extrusion_short_mesh" mass="1.5" pos="-0.05 -0.05 -0.04" '
                 'material="gray"/>',
-                '\t\t\t<geom name="alu_extrusion_2" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="-0.05 0.72 -0.04" '
+                '\t\t\t<geom name="alu_extrusion_2" type="mesh" mesh="alu_extrusion_long_mesh" mass="2.5" pos="-0.05 0.77 -0.04"  euler="0 0 -1.5708" '
                 'material="gray"/>',
                 '\t\t\t<geom name="alu_extrusion_3" type="mesh" mesh="alu_extrusion_short_mesh" mass="1.5" pos="0.96 0 -0.04" '
                 'material="gray"/>',
@@ -311,12 +314,13 @@ if __name__ == '__main__':
     err_scale_xyc_fast = np.array([2.0, 2.0, 1.0, 1.0, 1.0, 6.0])
     env.impedance_controllers[0].set_pose_err_scale(err_scale_xy_fast)
     env.impedance_controllers[1].set_pose_err_scale(err_scale_xy_fast)
+    e_threshold = 1e-2
     try:
         while True:
             platform_pose = env.magbot.get_platform_pose(env.model, env.data, np.array([0]))
 
-            pos_err = np.abs(platform_setpose[:, :3] - platform_pose[:, :3])
-            if (pos_err < 1e-2).all():
+            pos_err = np.abs(platform_setpose[:, :3] - platform_pose[:, :3])            
+            if (pos_err < e_threshold).all():
                 if cnt == 0:
                     env.impedance_controllers[0].set_pose_err_scale(err_scale_xy_fast)
                     env.impedance_controllers[1].set_pose_err_scale(err_scale_xy_fast)
@@ -331,13 +335,14 @@ if __name__ == '__main__':
                     env.impedance_controllers[0].set_pose_err_scale(0.5)
                     env.impedance_controllers[1].set_pose_err_scale(0.5)
                     platform_setpose[0, :3] = np.array([0.3519234, 0.6, 0.205])
+                    e_threshold = 3e-2
                 elif cnt == 4:
                     env.impedance_controllers[0].set_pose_err_scale(err_scale_xyc_fast)
                     env.impedance_controllers[1].set_pose_err_scale(err_scale_xyc_fast)
                     platform_setpose[0, 3] = np.deg2rad(-14.0)
+                    e_threshold = 1e-2
                 elif cnt == 500:
                     platform_setpose[0, 3] = 0.0
-
                 if cnt < 700:
                     cnt += 1
                 else:
