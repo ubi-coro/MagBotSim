@@ -91,4 +91,4 @@ line-ending = "auto"
 [tool.ruff.lint]
 # See https://beta.ruff.rs/docs/rules/
 select = ["E", "F", "B", "D", "UP", "RUF"]
-ignore = ["B028", "D100", "D101", "D103", "D104", "D107", "D203", "D205", "D213", "D301", "D401", "D407", "D414", "RUF012", "RUF013"]
+ignore = ["B028", "D100", "D101", "D103", "D104", "D107", "D203", "D205", "D213", "D301", "D401", "D407", "D414", "RUF005", "RUF012", "RUF013"]

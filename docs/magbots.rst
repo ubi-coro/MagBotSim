@@ -8,7 +8,7 @@ MagBots
    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
 
       <iframe width="640" height="360"
-            src="https://www.youtube.com/embed/gAb7l0zvhG0?autoplay=1&mute=1&loop=1&playlist=gAb7l0zvhG0"
+            src="https://www.youtube.com/embed/KYhGPoFNa4k?autoplay=1&mute=1&loop=1&playlist=KYhGPoFNa4k"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen></iframe>
@@ -22,12 +22,12 @@ MagBots
    </div>
    <br>
 
-The movers of a MagLev system can be coupled into a composite robotic platform, i.e. MagBots, thereby 
-expanding the workspace, payload, and functional dexterity of the MagLev system. Additional feeding
-technology is commonly used in a machine to compensate for the limited workspace of MagLev systems. However,
-feeding technologies, such as robots, are expensive and slow compared to a MagLev mover. In contrast, MagBots are 
+The movers of a MagLev system can be coupled into a composite robotic platforms, i.e. MagBots, thereby 
+expanding the workspace, payload, and functional dexterity of the MagLev system. Additional handling equipment is 
+commonly used in a machine to compensate for the limited manipulation capabilities of MagLev mover. However,
+handling equipment, such as industrial robot arms, are expensive and slow compared to a MagLev mover. In contrast, MagBots are 
 low-cost, can utilize the full dynamics of the MagLev movers, and expand the task-specific capabilities of
-machines without requiring additional feeding technology. Moreover, MagBots can reduce product processing times, 
+machines without requiring additional handling equipment. Moreover, MagBots can reduce product processing times, 
 as product transport and processing steps can be carried out simultaneously, e.g.
 mixing liquids during transport. Therefore, the application of reconfigurable MagBots significantly reduces the costs and
 footprint of a machine, offering a cost-effective alternative to traditional machines that rely on feeding mechanisms.
@@ -38,6 +38,7 @@ The MuJoCo models and the inverse kinematics controllers of the following MagBot
    :maxdepth: 1
 
    magbots/sixD_platform
+   magbots/gripper
 
 Examples and Tutorials
 ----------------------

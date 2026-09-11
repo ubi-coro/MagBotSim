@@ -63,6 +63,7 @@ setpoints
 stl
 str
 subclassing
+th
 timestep
 translational
 utils

@@ -8,7 +8,26 @@
    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
 
       <iframe width="888" height="500"
-            src="https://www.youtube.com/embed/2AJgtwbnyGg?autoplay=1&mute=1&loop=1&playlist=2AJgtwbnyGg"
+            src="https://www.youtube.com/embed/6XXB83qD3wI?autoplay=1&mute=1&loop=1&playlist=6XXB83qD3wI"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+
+   </div>
+   <br>
+
+.. raw:: html
+
+   <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+
+      <iframe width="640" height="360"
+            src="https://www.youtube.com/embed/KYhGPoFNa4k?autoplay=1&mute=1&loop=1&playlist=KYhGPoFNa4k"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen></iframe>
+
+      <iframe width="640" height="360"
+            src="https://www.youtube.com/embed/lxLWz1KodkY?autoplay=1&mute=1&loop=1&playlist=lxLWz1KodkY"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen></iframe>
@@ -20,7 +39,7 @@ To expand the workspace of a MagLev system in all dimensions, payload and functi
 a single mover, the 6D-Platform MagBot has been developed - a low-cost parallel kinematic with six DoF that 
 couples two movers into a composite robotic platform. The 6D-Platform MagBot is designed to be
 compatible with all industrial MagLev systems. Additionally, the MagBot can be autonomously dropped off or 
-picked up by the mover using a docking station. The platform of the MagBot is controlled by the x-, y-, and :math:`\gamma`-axes of the movers.
+picked up by the movers using a docking station. The platform of the MagBot is controlled by the x-, y-, and :math:`\gamma`-axes of the movers.
 To enable the development of motion planning approaches for Magnetic Robotics, a MuJoCo model of the 6D-Platform MagBot 
 is integrated in the MagBotSim together with the inverse kinematics controller.
 

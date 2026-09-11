@@ -3,6 +3,54 @@ import numpy as np
 # The following rotations utils are developed with the help of Gemini.
 
 
+class ContinuousYawExtractor:
+    """Extracts continuous unwrapped yaw angles over time, either from quaternions or from a raw angle already computed elsewhere."""
+
+    def __init__(self, num_samples: int) -> None:
+        self.num_samples = num_samples
+        self.last_raw_yaw = None
+        self.yaws = np.zeros((num_samples,))
+
+    def update(self, qpos_quats: np.ndarray) -> np.ndarray:
+        """Calculate raw yaw angles from quaternions and update the continuous unwrapped state.
+
+        :param qpos_quats: numpy array of shape (num_samples, 4) (order: [w, x, y, z])
+        :return: numpy array of shape (num_samples,) representing continuous yaw in radians
+        """
+        w = qpos_quats[:, 0]
+        x = qpos_quats[:, 1]
+        y = qpos_quats[:, 2]
+        z = qpos_quats[:, 3]
+
+        # standard quaternion-to-yaw conversion (assuming roll/pitch remain small)
+        raw_yaw = np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y**2 + z**2))
+        return self.update_from_angle(raw_yaw)
+
+    def update_from_angle(self, raw_yaw: np.ndarray) -> np.ndarray:
+        """Update the continuous unwrapped state using an already-computed raw (wrapped) yaw angle.
+
+        :param raw_yaw: the wrapped yaw angle(s) in rad, e.g. straight from ``arctan2``. Shape: (num_samples,)
+        :return: numpy array of shape (num_samples,) representing continuous yaw in radians
+        """
+        # Initialize state on the first physics step
+        if self.last_raw_yaw is None:
+            self.last_raw_yaw = np.copy(raw_yaw)
+            self.yaws = np.copy(raw_yaw)
+            return self.yaws
+
+        # compute change in rotation since the last physics update step
+        delta_yaw = raw_yaw - self.last_raw_yaw
+
+        # unwrap phase wrap-around jumps (> pi or < -pi) back to true physical movement
+        delta_yaw = (delta_yaw + np.pi) % (2.0 * np.pi) - np.pi
+
+        # accumulate the small deltas into the infinite tracking state
+        self.yaws += delta_yaw
+        self.last_raw_yaw = np.copy(raw_yaw)
+
+        return self.yaws
+
+
 def vec_quat2euler(quat: np.ndarray) -> np.ndarray:
     """Calculate euler angles form quaternions. This function is vectorized.
 

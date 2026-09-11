@@ -16,6 +16,7 @@ A detailed documentation of all basic environments, MagBots, and utilities can b
    :caption: MagBots
 
    api_reference/sixD_platform_magbot
+   api_reference/gripper_magbot
 
 .. toctree::
    :maxdepth: 1

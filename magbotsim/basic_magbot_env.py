@@ -1048,7 +1048,7 @@ class BasicMagBotEnv:
         shape: str,
         size: np.ndarray,
         friction: np.ndarray,
-        additional_mover_body_xml_str: None | str = None,
+        additional_mover_body_xml_str: str | None = None,
     ) -> tuple[str | None, str]:
         """Generate MuJoCo XML asset and body strings for creating mover objects in the simulation.
 
