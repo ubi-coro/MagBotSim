@@ -71,7 +71,7 @@ def get_joint_addrs_and_ndims(model: MjModel, name: str) -> tuple[int, int, int,
     """
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
     assert joint_id != -1, 'Joint name not found in MuJoCo model.'
-    joint_type = model.jnt_type[joint_id]
+    joint_type = mujoco.mjtJoint(model.jnt_type[joint_id])
     joint_qpos_addr = model.jnt_qposadr[joint_id]
     joint_qvel_qacc_addr = model.jnt_dofadr[joint_id]
 

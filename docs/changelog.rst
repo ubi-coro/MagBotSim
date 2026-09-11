@@ -1,12 +1,13 @@
 Changelog
 =========
 
-Pre-Release v1.3.0a (2026-09-11)
---------------------------------
+Release v1.3.0 (2026-09-11)
+---------------------------
 
 General
 ^^^^^^^
 1. Add Gripper MagBot including inverse kinematics controller
+2. Update mujoco utils for compatibility with latest MuJoCo versions (3.12.0 and 3.13.0)
 
 Release v1.2.0 (2026-07-18)
 ---------------------------
