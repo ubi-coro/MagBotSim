@@ -207,3 +207,6 @@ marimo/_lsp/
 __marimo__/
 
 docs/stl_list.rst
+
+# MacOS specific files
+.DS_Store
