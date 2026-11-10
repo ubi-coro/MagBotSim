@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import numpy as np
 import mujoco
 from mujoco import MjModel, MjData
+from scipy.interpolate import CubicSpline
 from magbotsim.utils import rotations_utils, mujoco_utils
 from magbotsim.utils.rotations_utils import ContinuousYawExtractor
 
@@ -26,7 +27,7 @@ class GripperMagBotsAPM4330Params:
     s_m1: float = 0.9969
     s_m2: float = -182.4376
 
-    z_p_min: float = 0.16773
+    z_p_min: float = 0.167732
     z_p_max: float = 0.22037
     z_d_min: float = 0.026
     f_d_max: float = 0.017
@@ -75,6 +76,7 @@ class GripperMagBotsAPM4330:
         # calibration mapping between the finger distance and the finger (jaw) angle, built in update_cached_mujoco_data
         self._finger_distance_grid = None
         self._finger_angle_grid = None
+        self._finger_distance_to_angle_spline: CubicSpline | None = None
         self.finger_distance_min = None
         self.finger_distance_max = None
 
@@ -134,10 +136,11 @@ class GripperMagBotsAPM4330:
         finally:
             model.opt.gravity[:] = gravity
 
-        # store the samples ordered by ascending distance (required by np.interp in finger_distance_to_angle)
+        # store the samples ordered by ascending distance (required by CubicSpline)
         order = np.argsort(finger_distances)
         self._finger_distance_grid = finger_distances[order]
         self._finger_angle_grid = finger_angles[order]
+        self._finger_distance_to_angle_spline = CubicSpline(self._finger_distance_grid, self._finger_angle_grid)
         self.finger_distance_min = float(self._finger_distance_grid[0])
         self.finger_distance_max = float(self._finger_distance_grid[-1])
 
@@ -149,14 +152,14 @@ class GripperMagBotsAPM4330:
         :param finger_distance: the desired distance(s) between the finger pads in m. Shape: (num_samples,)
         :return: the corresponding finger (jaw) angle(s) in rad. Shape: (num_samples,)
         """
-        if self._finger_distance_grid is None:
+        if self._finger_distance_grid is None or self._finger_distance_to_angle_spline is None:
             raise RuntimeError(
                 'Finger distance calibration is not available. Call update_cached_mujoco_data(model) before using '
                 'finger_distance_to_angle or gripperSetPose2MoverSetPose.'
             )
 
         clipped_distance = np.clip(finger_distance, self._finger_distance_grid[0], self._finger_distance_grid[-1])
-        return np.interp(clipped_distance, self._finger_distance_grid, self._finger_angle_grid)
+        return self._finger_distance_to_angle_spline(clipped_distance)
 
     def _update_cached_gripper_qpos_indices(self, model: MjModel) -> None:
         """Update gripper qpos indices.

@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Pre-Release v1.4.0a1 (2026-11-10)
+Pre-Release v1.4.0a2 (2026-11-10)
 ---------------------------------
 
 General
@@ -12,6 +12,9 @@ General
 Bug Fixes
 ^^^^^^^^^
 1. Fixed initialization of ``BasicMagBotMultiAgentEnv``.
+2. Fixed some minor discontinuity issues in edge cases:
+    - Numerical rounding issue for z_p_min (in ``GripperMagBotsAPM4330Params``)
+    - Finger distance to angle calculation now became c2 smooth (in ``GripperMagBotsAPM4330``)
 
 Release v1.3.0 (2026-09-11)
 ---------------------------
