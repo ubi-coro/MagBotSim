@@ -6,7 +6,7 @@ from magbotsim import BasicMagBotEnv, MoverImpedanceController, GripperMagBotsAP
 class GripperMagBotExampleEnv(BasicMagBotEnv):
     """Simple example environment with two Gripper MagBots."""
 
-    def __init__(self) -> None:
+    def __init__(self, use_profile_frame: bool = False) -> None:
         # mover parameters, collision parameters and initial start positions
         mover_mass = np.array([1.264] * 6)
         bumper_mass = np.array([0.05] * 6)
@@ -52,6 +52,7 @@ class GripperMagBotExampleEnv(BasicMagBotEnv):
             initial_mover_start_xy_pos=self.initial_mover_start_xy_pos,
             custom_model_xml_strings=None,
             use_mj_passive_viewer=True,
+            use_profile_frame=use_profile_frame,
         )
 
         # impedance controller
@@ -226,7 +227,7 @@ if __name__ == '__main__':
             [1.2 + 0.24 + fR, 0.48, initial_z_pos, np.deg2rad(0.0), np.deg2rad(0.0), np.deg2rad(0.0), finger_distance],  # single-track mode
         ]
     )
-    env = GripperMagBotExampleEnv()
+    env = GripperMagBotExampleEnv(use_profile_frame=True)
 
     num_cycles = 20
     try:

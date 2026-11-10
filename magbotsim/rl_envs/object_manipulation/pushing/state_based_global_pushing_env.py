@@ -110,6 +110,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         if ``learn_pose=True`` and ``use_sparse_pose_reward=False``)
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
+    :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     """
 
     def __init__(
@@ -145,6 +146,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1.0,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         self.num_movers = num_movers
         self.learn_jerk = learn_jerk
@@ -219,6 +221,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             collision_params=collision_params,
             custom_model_xml_strings=None,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
         # maximum velocity, acceleration and jerk

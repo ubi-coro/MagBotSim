@@ -89,6 +89,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
     :param timeout_steps: the number of steps after which the episode is terminated if no goal is reached by any mover within that
         specified time limit, defaults to 50
     :param enable_energy_tracking: whether to track energy metrics for benchmarking purposes, defaults to False
+    :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     """
 
     def __init__(
@@ -116,6 +117,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         self.learn_jerk = learn_jerk
         self.enable_energy_tracking = enable_energy_tracking
@@ -137,6 +139,7 @@ class LongHorizonGlobalTrajectoryPlanningEnv(BasicMagBotSingleAgentEnv):
             collision_params=collision_params,
             custom_model_xml_strings=None,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
         self.num_steps = 0
@@ -887,6 +890,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB0(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[0],
@@ -912,6 +916,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB0(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -939,6 +944,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB1(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[1],
@@ -964,6 +970,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB1(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -991,6 +998,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB2(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[2],
@@ -1016,6 +1024,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB2(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1043,6 +1052,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB3(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[3],
@@ -1068,6 +1078,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB3(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1095,6 +1106,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB4(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[4],
@@ -1120,6 +1132,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB4(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1147,6 +1160,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB5(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[5],
@@ -1172,6 +1186,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB5(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1199,6 +1214,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB6(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[6],
@@ -1224,6 +1240,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB6(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1251,6 +1268,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB7(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[7],
@@ -1276,6 +1294,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB7(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1303,6 +1322,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB8(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[8],
@@ -1328,6 +1348,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB8(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -1355,6 +1376,7 @@ class LongHorizonGlobalTrajectoryPlanningEnvB9(LongHorizonGlobalTrajectoryPlanni
         use_mj_passive_viewer: bool = False,
         timeout_steps: int | None = 50,
         enable_energy_tracking: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             BENCHMARK_PLANNING_LAYOUTS[9],
@@ -1380,4 +1402,5 @@ class LongHorizonGlobalTrajectoryPlanningEnvB9(LongHorizonGlobalTrajectoryPlanni
             use_mj_passive_viewer,
             timeout_steps,
             enable_energy_tracking,
+            use_profile_frame=use_profile_frame,
         )

@@ -101,6 +101,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         to 0.05 [m]
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the
         Gymnasium MuJoCo WindowViewer with custom overlays is used.
+    :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     """
 
     def __init__(
@@ -119,6 +120,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
         learn_jerk: bool = False,
         threshold_pos: float = 0.05,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         self.learn_jerk = learn_jerk
 
@@ -179,6 +181,7 @@ class StateBasedStaticObstaclePushingEnv(BasicMagBotSingleAgentEnv):
             collision_params=collision_params,
             custom_model_xml_strings=None,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
         # maximum velocity, acceleration and jerk

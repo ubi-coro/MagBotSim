@@ -160,6 +160,10 @@ class BasicMagBotEnv:
         and possibly goals; defaults to None. This dictionary can be further modified using the ``_custom_xml_string_callback()``.
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
+    :param use_profile_frame: whether to surround all exposed tile edges, including holes, with a static, collision-enabled
+        profile frame, defaults to False. Profiles stay outside the tile footprints and have a fixed width of 0.05 m and height
+        of 0.10 m. Their top is 0.065 m above the tile surface (world z=0), with the bottom at z=-0.035 m. Rectangular tiles are supported.
+        Raises ValueError if a section is too short or the frame would overlap tiles or other frame sections.
     """
 
     metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
@@ -182,6 +186,7 @@ class BasicMagBotEnv:
         initial_mover_goal_xy_pos: np.ndarray | None = None,
         custom_model_xml_strings: dict[str, str] | None = None,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         # rng
         self.rng_noise = np.random.default_rng()
@@ -211,6 +216,8 @@ class BasicMagBotEnv:
         self.tile_mass = tile_params.get('mass', 5.6)
         self.x_pos_tiles, self.y_pos_tiles = self.get_tile_xy_pos()
         self._check_tile_config()
+        self.use_profile_frame = use_profile_frame
+
         # remember certain indices that belong to specific structures in the tile layout and are important for collision checking
         mask_3x3 = np.ones((3, 3), dtype=np.int8)
         self.idx_x_tiles_3x3, self.idx_y_tiles_3x3 = self.get_tile_indices_mask(mask=mask_3x3)
@@ -1146,6 +1153,107 @@ class BasicMagBotEnv:
 
         return (asset_str, body_str, geom_name)
 
+    def _generate_profile_frame_xml_strings(self) -> tuple[str, str]:
+        """Build static frame assets and bodies from exposed grid edges, with tiles on the left.
+
+        Merge straight edges, offset them into free space, and form butt joints at corners.
+        Include each end cover in its section's length so even point contacts between tiles stay clear.
+
+        :return: mesh asset XML and frame body XML
+        :raises ValueError: if the fixed-width frame does not fit the layout
+        """
+        width, height, cover_thickness = 0.05, 0.10, 0.001
+        profile_top = 0.065
+        edges = []
+        outgoing = {}
+        padded = np.pad(self.layout_tiles, 1)
+        for i, j in np.argwhere(self.layout_tiles):
+            corners = ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1))
+            neighbors = ((i + 1, j), (i + 2, j + 1), (i + 1, j + 2), (i, j + 1))
+            for side, neighbor in enumerate(neighbors):
+                if not padded[neighbor]:
+                    start, end = corners[side], corners[(side + 1) % 4]
+                    outgoing.setdefault(start, []).append(len(edges))
+                    edges.append((start, end))
+
+        directions = np.array([np.subtract(end, start) for start, end in edges])
+
+        def turn(a: np.ndarray, b: np.ndarray) -> int:
+            """Return the signed turn of two cardinal directions."""
+            return int(a[0] * b[1] - a[1] * b[0])
+
+        # At diagonal tile contacts, turn right around the connected free space.
+        successors = [
+            min(outgoing[end], key=lambda nxt, idx=idx: turn(directions[idx], directions[nxt])) for idx, (_, end) in enumerate(edges)
+        ]
+        predecessors = {nxt: idx for idx, nxt in enumerate(successors)}
+        assets, geoms, bounds = [], [], []
+        mesh_names = {}
+        steps = 2 * self.tile_size[:2]
+        mesh_path = self.meshdir / 'misc' / 'extrusions'
+
+        for idx, (grid_start, _) in enumerate(edges):
+            direction = directions[idx]
+            previous = directions[predecessors[idx]]
+            if np.array_equal(previous, direction):
+                continue
+            last = idx
+            while np.array_equal(directions[successors[last]], direction):
+                last = successors[last]
+
+            start = np.array(grid_start) * steps
+            end = np.array(edges[last][1]) * steps
+            outward = np.array([direction[1], -direction[0]])
+            if turn(previous, direction) < 0:
+                start += width * direction
+            if turn(direction, directions[successors[last]]) > 0:
+                end += width * direction
+            start += outward * width / 2
+            end += outward * width / 2
+            length = float(np.dot(end - start, direction))
+            if not np.isfinite(length) or length < width - 1e-9:
+                raise ValueError('Profile frame does not fit: a boundary section is too short for the profile and cover.')
+
+            # Reserve the final millimeter for a flush cover, outside the metal mesh.
+            profile_length = length - cover_thickness
+            profile_end = end - cover_thickness * direction
+            section_idx = len(bounds) // 2
+            mesh_key = round(profile_length, 12)
+            if mesh_key not in mesh_names:
+                mesh_name = f'profile_frame_mesh_{len(mesh_names)}'
+                mesh_names[mesh_key] = mesh_name
+                assets.append(
+                    f'\t\t<mesh name="{mesh_name}" file="{mesh_path / "alu_extrusion_50x100_240mm.stl"}" '
+                    f'scale="1 1 {profile_length / 0.24}"/>'
+                )
+            mesh_name = mesh_names[mesh_key]
+            geoms.append(
+                f'\t\t\t<geom name="profile_frame_profile_{section_idx}" type="mesh" mesh="{mesh_name}" '
+                f'pos="{start[0]} {start[1]} {profile_top - height / 2}" '
+                f'xyaxes="{-outward[0]} {-outward[1]} 0 0 0 1" material="gray" contype="1" conaffinity="1"/>'
+            )
+            cover_start = profile_end - outward * width / 2
+            geoms.append(
+                f'\t\t\t<geom name="profile_frame_cover_{section_idx}" type="mesh" mesh="profile_frame_cover_mesh" '
+                f'pos="{cover_start[0]} {cover_start[1]} {profile_top - height}" '
+                f'xyaxes="{outward[0]} {outward[1]} 0 {direction[0]} {direction[1]} 0" '
+                'material="black" contype="1" conaffinity="1"/>'
+            )
+            for a, b in ((start, profile_end), (profile_end, end)):
+                bounds.append((np.minimum(a, b) - np.abs(outward) * width / 2, np.maximum(a, b) + np.abs(outward) * width / 2))
+
+        frame_bounds = np.array(bounds)
+        tile_lower = np.argwhere(self.layout_tiles) * steps
+        for idx, (lower, upper) in enumerate(frame_bounds):
+            tile_overlap = np.minimum(upper, tile_lower + steps) - np.maximum(lower, tile_lower)
+            frame_overlap = np.minimum(upper, frame_bounds[:idx, 1]) - np.maximum(lower, frame_bounds[:idx, 0])
+            if np.any(np.all(tile_overlap > 1e-9, axis=1)) or np.any(np.all(frame_overlap > 1e-9, axis=1)):
+                raise ValueError('Profile frame does not fit: profiles or covers overlap tiles or other frame sections.')
+
+        assets.append(f'\t\t<mesh name="profile_frame_cover_mesh" file="{mesh_path / "extrusion_cover.stl"}"/>')
+        body = '\n'.join(['\t\t<body name="profile_frame">', *geoms, '\t\t</body>'])
+        return '\n' + '\n'.join(assets), body
+
     def generate_model_xml_string(
         self,
         mover_start_xy_pos: np.ndarray | None = None,
@@ -1327,6 +1435,9 @@ class BasicMagBotEnv:
         mover_asset_xml_strs = ''.join(mover_asset_lines)
         mover_xml_str = '\n'.join(mover_body_lines)
 
+        # profile frame
+        frame_assets, frame_body = self._generate_profile_frame_xml_strings() if self.use_profile_frame else ('', '')
+
         # complete XML string
         ts = self.tile_size
         xml_lines = [
@@ -1357,7 +1468,7 @@ class BasicMagBotEnv:
             '\t\t<material name="line_mat" reflectance="0.01" shininess="0.01" specular="0.1" rgba="0.5 0.5 0.5 1"/>',
             '\t\t<texture name="texplane" builtin="flat" height="256" width="256" rgb1=".8 .8 .8" rgb2=".8 .8 .8"/>',
             '\t\t<texture type="skybox" builtin="gradient" rgb1="0.8 0.898 1" rgb2="0.8 0.898 1" width="32" height="32"/>',
-            mover_asset_xml_strs + custom_assets_xml_str,
+            mover_asset_xml_strs + custom_assets_xml_str + frame_assets,
             '\t</asset>',
             # default
             '\n\n\t<default>',
@@ -1389,6 +1500,8 @@ class BasicMagBotEnv:
                 f'\t\t<body name="tile_body" childclass="magnetic_robotics" pos="0 0 {-self.tile_size[2]}" gravcomp="1">',
                 tile_xml_str,
                 '\t\t</body>',
+                '\n\t\t<!-- profile frame -->',
+                frame_body,
                 '\n\t\t<!-- movers -->',
                 mover_xml_str,
                 custom_worldbody_xml_str,

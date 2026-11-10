@@ -6,7 +6,10 @@ import mujoco
 import numpy as np
 import pytest
 
-from magbotsim import BasicMagBotEnv
+from shapely.geometry import box
+from shapely.ops import unary_union
+
+from magbotsim import BasicMagBotEnv, BasicMagBotMultiAgentEnv
 
 
 @pytest.mark.parametrize(
@@ -2110,3 +2113,120 @@ def test_mover_position_is_valid_check(layout_tiles, qpos, collision_params, add
     assert len(pos_is_valid.shape) == 1
     assert pos_is_valid.shape[0] == num_qpos
     assert (pos_is_valid == expected_result).all()
+
+
+def _frame_geom_bounds(env, prefix):
+    """Return world-space mesh bounds for frame geoms matching a name prefix."""
+    bounds = []
+    for geom_id in range(env.model.ngeom):
+        geom = env.model.geom(geom_id)
+        if not (geom.name or '').startswith(prefix):
+            continue
+        mesh_id = int(geom.dataid[0])
+        start = env.model.mesh_vertadr[mesh_id]
+        stop = start + env.model.mesh_vertnum[mesh_id]
+        vertices = env.model.mesh_vert[start:stop]
+        world = vertices @ env.data.geom_xmat[geom_id].reshape(3, 3).T + env.data.geom_xpos[geom_id]
+        bounds.append((world.min(axis=0), world.max(axis=0)))
+    return np.array(bounds)
+
+
+@pytest.mark.parametrize('enabled', [None, False])
+def test_profile_frame_disabled(enabled):
+    kwargs = {} if enabled is None else {'use_profile_frame': enabled}
+    env = BasicMagBotEnv(np.ones((1, 1)), 1, render_mode=None, **kwargs)
+    try:
+        assert not env.use_profile_frame
+        assert env.model.nmesh == 0
+        assert env.model.nbody == 3
+        assert 'profile_frame' not in env.generate_model_xml_string()
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize(
+    'layout, num_sections',
+    [
+        (np.ones((1, 1)), 4),
+        (np.ones((3, 2)), 4),
+        (np.array([[1, 1], [1, 0]]), 6),
+        (np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]]), 8),
+        (np.eye(2, dtype=int), 8),
+        (np.array([[1, 0, 1]]), 8),
+        (np.array([[1, 1, 1], [1, 0, 1], [1, 1, 0]]), 10),
+    ],
+)
+@pytest.mark.parametrize('tile_xy', [(0.24, 0.24), (0.32, 0.32), (0.18, 0.41), (0.11, 0.13)])
+def test_profile_frame_geometry(layout, num_sections, tile_xy):
+    env = BasicMagBotEnv(layout, 1, tile_params={'size': np.array([*tile_xy, 0.0352]) / 2}, render_mode=None, use_profile_frame=True)
+    try:
+        profiles = _frame_geom_bounds(env, 'profile_frame_profile_')
+        covers = _frame_geom_bounds(env, 'profile_frame_cover_')
+        assert len(profiles) == len(covers) == num_sections
+        for bounds in (profiles, covers):
+            np.testing.assert_allclose(bounds[:, 0, 2], -0.035, atol=1e-7)
+            np.testing.assert_allclose(bounds[:, 1, 2], 0.065, atol=1e-7)
+        np.testing.assert_allclose(np.min(np.diff(covers[:, :, :2], axis=1), axis=2).ravel(), 0.001, atol=1e-7)
+        np.testing.assert_allclose(np.max(np.diff(covers[:, :, :2], axis=1), axis=2).ravel(), 0.05, atol=1e-7)
+        for lower, upper in profiles:
+            assert np.any(np.isclose((upper - lower)[:2], 0.05, atol=1e-7))
+        for profile, cover in zip(profiles, covers, strict=True):
+            profile_box = box(*profile[0, :2], *profile[1, :2])
+            cover_box = box(*cover[0, :2], *cover[1, :2])
+            assert profile_box.distance(cover_box) < 1e-7
+
+        tiles = unary_union(
+            [box(i * tile_xy[0], j * tile_xy[1], (i + 1) * tile_xy[0], (j + 1) * tile_xy[1]) for i, j in np.argwhere(layout)]
+        )
+        footprints = [box(*lower[:2], *upper[:2]) for lower, upper in np.concatenate((profiles, covers))]
+        expected = tiles.buffer(0.05, join_style=2).difference(tiles)
+        actual = unary_union(footprints)
+        assert actual.symmetric_difference(expected).area < 1e-7
+        assert actual.intersection(tiles).area < 1e-8
+        for idx, footprint in enumerate(footprints):
+            assert all(footprint.intersection(other).area < 1e-8 for other in footprints[:idx])
+        frame_body = env.model.body('profile_frame')
+        assert frame_body.jntnum[0] == 0
+        assert frame_body.parentid[0] == 0
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize('tile_thickness, table_height', [(0.0352, 0.4), (0.08, 0.2)])
+def test_profile_frame_height_relative_to_tile_surface(tile_thickness, table_height):
+    env = BasicMagBotEnv(
+        np.ones((1, 1)),
+        1,
+        tile_params={'size': np.array([0.12, 0.12, tile_thickness / 2])},
+        table_height=table_height,
+        render_mode=None,
+        use_profile_frame=True,
+    )
+    try:
+        tile = env.model.geom('tile_0_0')
+        tile_top = env.data.geom_xpos[tile.id, 2] + tile.size[2]
+        bounds = _frame_geom_bounds(env, 'profile_frame_')
+        np.testing.assert_allclose(bounds[:, 1, 2] - tile_top, 0.065, atol=1e-7)
+        np.testing.assert_allclose(bounds[:, 0, 2] - tile_top, -0.035, atol=1e-7)
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize('tile_length', [0.04, 0.08])
+def test_profile_frame_rejects_narrow_holes(tile_length):
+    layout = np.ones((3, 3))
+    layout[1, 1] = 0
+    kwargs = {'tile_params': {'size': np.array([tile_length / 2, tile_length / 2, 0.0176])}, 'render_mode': None}
+    with pytest.raises(ValueError, match='Profile frame does not fit'):
+        BasicMagBotEnv(layout, 1, use_profile_frame=True, **kwargs)
+    env = BasicMagBotEnv(layout, 1, **kwargs)
+    env.close()
+
+
+def test_profile_frame_multi_agent_initialization():
+    env = BasicMagBotMultiAgentEnv(np.ones((1, 1)), 1, render_mode=None, use_profile_frame=True)
+    try:
+        assert env.model.body('profile_frame').id > 0
+        assert env.agents == env.possible_agents == env.mover_names
+    finally:
+        env.close()

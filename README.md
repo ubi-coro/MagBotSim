@@ -59,6 +59,7 @@ env_kwargs = {
     'initial_mover_zpos': 0.002,
     'render_mode': 'human',
     'render_every_cycle': True,
+    'use_profile_frame': True
 }
 
 env = gym.make("StateBasedPushTEnv-v0", **env_kwargs)

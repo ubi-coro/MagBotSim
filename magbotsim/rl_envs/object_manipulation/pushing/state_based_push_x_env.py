@@ -82,6 +82,7 @@ class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
     :param object_at_goal_reward: the positive reward given when the object reaches the goal without collisions, defaults to 1.0
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
+    :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     """
 
     def __init__(
@@ -115,6 +116,7 @@ class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1.0,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=num_movers,
@@ -148,6 +150,7 @@ class StateBasedPushXEnv(StateBasedGlobalPushingEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -183,6 +186,7 @@ class StateBasedPushXEnvB0(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[0],
@@ -214,6 +218,7 @@ class StateBasedPushXEnvB0(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -249,6 +254,7 @@ class StateBasedPushXEnvB1(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[1],
@@ -280,6 +286,7 @@ class StateBasedPushXEnvB1(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -315,6 +322,7 @@ class StateBasedPushXEnvB2(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[2],
@@ -346,6 +354,7 @@ class StateBasedPushXEnvB2(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -381,6 +390,7 @@ class StateBasedPushXEnvB3(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[3],
@@ -412,6 +422,7 @@ class StateBasedPushXEnvB3(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -447,6 +458,7 @@ class StateBasedPushXEnvB4(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[4],
@@ -478,6 +490,7 @@ class StateBasedPushXEnvB4(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -513,6 +526,7 @@ class StateBasedPushXEnvB5(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[5],
@@ -544,6 +558,7 @@ class StateBasedPushXEnvB5(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -579,6 +594,7 @@ class StateBasedPushXEnvB6(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[6],
@@ -610,6 +626,7 @@ class StateBasedPushXEnvB6(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -645,6 +662,7 @@ class StateBasedPushXEnvB7(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[7],
@@ -676,6 +694,7 @@ class StateBasedPushXEnvB7(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -711,6 +730,7 @@ class StateBasedPushXEnvB8(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[8],
@@ -742,6 +762,7 @@ class StateBasedPushXEnvB8(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -777,6 +798,7 @@ class StateBasedPushXEnvB9(StateBasedPushXEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[9],
@@ -808,4 +830,5 @@ class StateBasedPushXEnvB9(StateBasedPushXEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
