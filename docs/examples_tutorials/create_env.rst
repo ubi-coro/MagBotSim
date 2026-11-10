@@ -29,7 +29,7 @@ Write the following code in ``panda_box_env.py``:
 
     class PandaBoxExampleEnv(BasicMagBotEnv):
 
-        def __init__(self, initial_panda_qpos_dict: dict | None = None) -> None:
+        def __init__(self, initial_panda_qpos_dict: dict | None = None, use_profile_frame: bool = False) -> None:
             # mover parameters, collision parameters and initial start positions
             mover_mass = np.array([1.264, 0.639, 0.639, 3.424])
             bumper_mass = np.array([0.05, 0.034, 0.034, 0.01])
@@ -84,6 +84,7 @@ Write the following code in ``panda_box_env.py``:
                 initial_mover_start_xy_pos=self.initial_mover_start_xy_pos,
                 custom_model_xml_strings=None,
                 use_mj_passive_viewer=True,
+                use_profile_frame=use_profile_frame,
             )
             # remember initial mover positions and orientations
             self.initial_mover_xyz_pos = np.zeros((self.num_movers, 3))

@@ -82,6 +82,7 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
     :param object_at_goal_reward: the positive reward given when the object reaches the goal without collisions, defaults to 1.0
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
+    :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     """
 
     def __init__(
@@ -113,6 +114,7 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1.0,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=num_movers,
@@ -146,6 +148,7 @@ class StateBasedPushBoxEnv(StateBasedGlobalPushingEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -179,6 +182,7 @@ class StateBasedPushBoxEnvB0(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[0],
@@ -208,6 +212,7 @@ class StateBasedPushBoxEnvB0(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -241,6 +246,7 @@ class StateBasedPushBoxEnvB1(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[1],
@@ -270,6 +276,7 @@ class StateBasedPushBoxEnvB1(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -303,6 +310,7 @@ class StateBasedPushBoxEnvB2(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[2],
@@ -332,6 +340,7 @@ class StateBasedPushBoxEnvB2(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -365,6 +374,7 @@ class StateBasedPushBoxEnvB3(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[3],
@@ -394,6 +404,7 @@ class StateBasedPushBoxEnvB3(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -427,6 +438,7 @@ class StateBasedPushBoxEnvB4(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[4],
@@ -456,6 +468,7 @@ class StateBasedPushBoxEnvB4(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -489,6 +502,7 @@ class StateBasedPushBoxEnvB5(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[5],
@@ -518,6 +532,7 @@ class StateBasedPushBoxEnvB5(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -551,6 +566,7 @@ class StateBasedPushBoxEnvB6(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[6],
@@ -580,6 +596,7 @@ class StateBasedPushBoxEnvB6(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -613,6 +630,7 @@ class StateBasedPushBoxEnvB7(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[7],
@@ -642,6 +660,7 @@ class StateBasedPushBoxEnvB7(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -675,6 +694,7 @@ class StateBasedPushBoxEnvB8(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[8],
@@ -704,6 +724,7 @@ class StateBasedPushBoxEnvB8(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
 
@@ -737,6 +758,7 @@ class StateBasedPushBoxEnvB9(StateBasedPushBoxEnv):
         per_step_penalty: float = -0.01,
         object_at_goal_reward: float = 1,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             num_movers=BENCHMARK_PUSHING_NUM_MOVERS[9],
@@ -766,4 +788,5 @@ class StateBasedPushBoxEnvB9(StateBasedPushBoxEnv):
             per_step_penalty=per_step_penalty,
             object_at_goal_reward=object_at_goal_reward,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )

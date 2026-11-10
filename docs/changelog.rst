@@ -1,6 +1,18 @@
 Changelog
 =========
 
+Pre-Release v1.4.0a1 (2026-11-10)
+---------------------------------
+
+General
+^^^^^^^
+1. Added optional, collision-enabled profile frames around exposed tile edges,
+   including inner holes, through ``use_profile_frame``. The profile and cover tops are 0.065 m (6.5 cm) above the tile surface.
+
+Bug Fixes
+^^^^^^^^^
+1. Fixed initialization of ``BasicMagBotMultiAgentEnv``.
+
 Release v1.3.0 (2026-09-11)
 ---------------------------
 

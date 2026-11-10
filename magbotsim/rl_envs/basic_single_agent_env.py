@@ -66,6 +66,7 @@ class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
         and possibly goals; defaults to None. This dictionary can be further modified using the ``_custom_xml_string_callback()``.
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
+    :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     """
 
     def __init__(
@@ -88,6 +89,7 @@ class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
         initial_mover_goal_xy_pos: np.ndarray | None = None,
         custom_model_xml_strings: dict[str, str] | None = None,
         use_mj_passive_viewer: bool = False,
+        use_profile_frame: bool = False,
     ) -> None:
         super().__init__(
             layout_tiles=layout_tiles,
@@ -106,6 +108,7 @@ class BasicMagBotSingleAgentEnv(BasicMagBotEnv, gym.Env, ABC):
             initial_mover_goal_xy_pos=initial_mover_goal_xy_pos,
             custom_model_xml_strings=custom_model_xml_strings,
             use_mj_passive_viewer=use_mj_passive_viewer,
+            use_profile_frame=use_profile_frame,
         )
 
         # rendering
