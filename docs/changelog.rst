@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Pre-Release v1.4.0a3 (2026-11-11)
+Pre-Release v1.4.0a4 (2026-11-12)
 ---------------------------------
 
 General
@@ -20,6 +20,7 @@ Bug Fixes
     - Numerical rounding issue for z_p_min (in ``GripperMagBotsAPM4330Params``)
     - Finger distance to angle calculation now became c2 smooth (in ``GripperMagBotsAPM4330``)
 3. Fixed stale rendering resources in ``MujocoViewerCollection`` after model reloads, which could 
+4. Fix damping calculation for rotational component together with corresponding env examples (in ``MoverImpedanceController``)
    cause missing objects or incorrectly displayed meshes.
 
 Release v1.3.0 (2026-09-11)

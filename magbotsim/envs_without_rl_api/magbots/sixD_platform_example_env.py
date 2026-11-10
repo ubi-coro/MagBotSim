@@ -219,10 +219,10 @@ if __name__ == '__main__':
             platform_setposes[0, 1] = 0.36 + fR * np.sin(fTime)
             platform_setposes[0, 2] = 0.03 * np.sin(3.5 * fTime) + 0.24
             # wave movement
-            platform_setposes[1, 3] = np.deg2rad(14.0)*np.cos(2.0 * fTime)
-            platform_setposes[1, 4] = np.deg2rad(14.0)*np.sin(2.0 * fTime)
+            platform_setposes[1, 3] = np.deg2rad(14.0) * np.cos(2.0 * fTime)
+            platform_setposes[1, 4] = np.deg2rad(14.0) * np.sin(2.0 * fTime)
             # env step (integration, collision checking, rendering)
-            env.step(platform_setposes=platform_setposes, num_cycles=num_cycles, render_every_cycle=True)
+            env.step(platform_setposes=platform_setposes, num_cycles=num_cycles, render_every_cycle=False)
             fTime += 0.001 * num_cycles
     except KeyboardInterrupt:
         pass
