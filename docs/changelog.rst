@@ -1,13 +1,17 @@
 Changelog
 =========
 
-Pre-Release v1.4.0a2 (2026-11-10)
+Pre-Release v1.4.0a3 (2026-11-11)
 ---------------------------------
 
 General
 ^^^^^^^
 1. Added optional, collision-enabled profile frames around exposed tile edges,
    including inner holes, through ``use_profile_frame``. The profile and cover tops are 0.065 m (6.5 cm) above the tile surface.
+2. Updated ``StateBasedGlobalPushingEnv``:
+    - Added H-, E-, and O-shaped objects and equilateral triangular prisms with configurable dimensions and mass.
+    - Added random object type selection on reset from a configured list, with explicit reset overrides taking precedence.
+    - Fixed pose reward calculations to use the geometry stored with each transition, independently of the current episode’s object type.
 
 Bug Fixes
 ^^^^^^^^^
@@ -15,6 +19,8 @@ Bug Fixes
 2. Fixed some minor discontinuity issues in edge cases:
     - Numerical rounding issue for z_p_min (in ``GripperMagBotsAPM4330Params``)
     - Finger distance to angle calculation now became c2 smooth (in ``GripperMagBotsAPM4330``)
+3. Fixed stale rendering resources in ``MujocoViewerCollection`` after model reloads, which could 
+   cause missing objects or incorrectly displayed meshes.
 
 Release v1.3.0 (2026-09-11)
 ---------------------------

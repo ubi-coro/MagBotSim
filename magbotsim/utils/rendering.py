@@ -271,8 +271,20 @@ class MujocoViewerCollection(MujocoRenderer):
         for viewer_name in self._viewers.keys():
             if 'rgb_array' in viewer_name or 'depth_array' in viewer_name or not self.use_mj_passive_viewer:
                 viewer = self._viewers[viewer_name]
+                viewer.make_context_current()
                 viewer.model = model
                 viewer.data = data
+
+                scene_flags = viewer.scn.flags.copy()
+                viewer.scn = mujoco.MjvScene(model, maxgeom=viewer.scn.maxgeom)
+                viewer.scn.flags[:] = scene_flags
+                viewer.pert = mujoco.MjvPerturb()
+
+                viewer.con.free()
+                viewer.con = mujoco.MjrContext(model, mujoco.mjtFontScale.mjFONTSCALE_150)
+                if 'rgb_array' in viewer_name or 'depth_array' in viewer_name:
+                    mujoco.mjr_resizeOffscreen(viewer.viewport.width, viewer.viewport.height, viewer.con)
+                viewer._set_mujoco_buffer()
             elif 'human' in viewer_name and self.use_mj_passive_viewer:
                 self._viewers[viewer_name].close()
                 viewer = mujoco.viewer.launch_passive(self.model, self.data)

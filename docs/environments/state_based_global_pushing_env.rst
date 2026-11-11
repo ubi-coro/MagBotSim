@@ -138,7 +138,8 @@ Environment Reset
 
 When the environment is reset, the following randomization occurs:
 
-1. **Object properties**: Type, dimensions, mass, and orientation can be sampled from configured ranges. For more information, please see the following section on object shapes.
+1. **Object properties**: A type is sampled when ``object_type`` is a list; a string keeps the type fixed.
+   Dimensions and mass are sampled from ``object_ranges``; orientations are randomized. Reset options override these choices.
 2. **Object placement**: Start and goal positions are randomly chosen within valid boundaries
 3. **Mover placement**: Initial positions are sampled ensuring collision-free placement
 4. **Collision avoidance**: The system ensures sufficient distance between movers and objects, and between object start/goal positions
@@ -153,7 +154,7 @@ The reset process includes validation to ensure:
 Object Shapes
 -------------
 
-The environment supports six different object shapes:
+The environment supports ten different object shapes:
 
 - **square_box**: Square box with equal width and height
 - **box**: Rectangular box with different width and height
@@ -161,15 +162,28 @@ The environment supports six different object shapes:
 - **t_shape**: T-shaped object composed of multiple box segments
 - **l_shape**: L-shaped object with vertical and horizontal segments
 - **plus_shape**: Plus/X-shaped object with perpendicular segments
+- **h_shape**: H-shaped object with two vertical bars and a central crossbar
+- **e_shape**: E-shaped object with a left vertical bar and three horizontal bars
+- **o_shape**: Rectangular frame with an open center
+- **triangle**: Solid equilateral triangular prism, pointing along local +y
 
 .. figure:: ../_static/envs/img_objects_isometric.png
    :align: center
    :width: 40%
 
-   Overview of all supported object types.
+   Overview of the ten object types.
 
 In the default configuration, all object parameters are fixed, and the default object is a square box.
-To use the environment with another object shape, set ``object_type`` to one of the object shapes listed above. 
+To use the environment with another fixed object shape, set ``object_type`` to one of the strings listed above.
+Alternatively, pass a nonempty list such as ``object_type=['t_shape', 'e_shape', 'triangle']``.
+Each reset samples uniformly over the list entries using the environment RNG; consecutive episodes may use the same type.
+
+An explicit ``reset(options={'object_type': 'o_shape'})`` always takes precedence, even when the type is outside the list.
+The override applies to that episode only. The next reset without a type override returns to the original fixed type or list.
+Strings and single-entry lists use the same seeded sampling behavior. Empty lists, unsupported names, and non-string
+reset overrides are rejected with assertions. The currently selected type is available as ``env.unwrapped.object_type``
+when using Gymnasium wrappers.
+
 These object shapes are parameterized with min and max values (min, max), and the environment automatically 
 selects new object parameters at random if min < max applies for a parameter range. The parameter ranges can 
 be changed by setting new values using ``object_ranges``. 
@@ -182,6 +196,20 @@ The following object parameters can be configured:
 - **s**: Segment width for composite shapes (T, L, plus) in m (default: (0.02, 0.02))
 - **d**: Depth parameter for segment positioning in composite shapes in m (default: (0.05, 0.05))
 - **mass**: Mass of the object in kg (default: (0.3, 0.3))
+
+Without custom ``object_ranges``, H, E, and O use ``segment_width=(0.01, 0.01)``
+for 2 cm thick bars; the other shapes keep their existing defaults.
+Custom ranges are used as supplied. As before, supply all six keys when defining
+custom ranges, for example by copying ``DEFAULT_OBJECT_RANGES``.
+Reset options such as ``object_width``, ``object_height``, ``object_depth``,
+``object_segment_width``, and ``object_mass`` override the corresponding sampled values.
+
+For the triangle, the side length is ``2 * width`` and its full height is
+``sqrt(3) * width``. Its half-height is derived automatically.
+Letter bars must leave open gaps: H requires ``width > 2 * segment_width`` and ``height > segment_width``;
+E requires ``width > segment_width`` and ``height > 3 * segment_width``; O requires
+both ``width`` and ``height`` to exceed ``2 * segment_width``. Invalid samples or
+reset overrides raise ``ValueError`` rather than resizing the bars automatically.
 
 .. figure:: ../_static/envs/img_object_geometry_labeled.png
    :align: center

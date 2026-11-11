@@ -60,6 +60,7 @@ Rexroth
 rgb
 rng
 setpoints
+sqrt
 stl
 str
 subclassing

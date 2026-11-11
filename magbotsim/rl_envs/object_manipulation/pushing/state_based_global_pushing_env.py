@@ -23,6 +23,10 @@ DEFAULT_OBJECT_TYPES = [
     't_shape',
     'l_shape',
     'plus_shape',
+    'h_shape',
+    'e_shape',
+    'o_shape',
+    'triangle',
 ]
 DEFAULT_OBJECT_RANGES = {
     'width': (0.06, 0.06),  # [m]
@@ -78,10 +82,13 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             of the collision shape to detect wall collisions. Think of this offset as moving the wall, i.e. the edge of a tile
             without an adjacent tile, closer to the center of the tile.
 
-    :param object_types: a sequence of strings that specifies which object types can be used, defaults to DEFAULT_OBJECT_TYPES.
-        Valid object types are: 'square_box', 'box', 'cylinder', 't_shape', 'l_shape', 'plus_shape'
+    :param object_type: a fixed object shape or a nonempty list sampled uniformly at each reset, defaults to 'square_box'.
+        The reset option 'object_type' overrides the selection for one episode. Valid types are 'square_box', 'box', 'cylinder',
+        't_shape', 'l_shape', 'plus_shape', 'h_shape', 'e_shape', 'o_shape', and 'triangle'.
     :param object_ranges: a dictionary that specifies the range of object parameters for random sampling, defaults to DEFAULT_OBJECT_RANGES.
-        Keys can include 'width', 'height', 'depth', 'segment_width', 'radius', 'mass'. Each value is a tuple (min_value, max_value)
+        Keys are 'width', 'height', 'depth', 'segment_width', 'radius', 'mass'. Each value is a tuple (min_value, max_value).
+        Dimensions are half-sizes. Without custom ranges, H/E/O use segment_width=(0.01, 0.01).
+        The equilateral triangle derives its half-height as sqrt(3) * width / 2; height is ignored.
     :param object_sliding_friction: the sliding friction coefficient of the object, defaults to 1.0
     :param object_torsional_friction: the torsional friction coefficient of the object, defaults to 0.005
     :param v_max_xy: the maximum velocity in x- and y-direction, defaults to 2.0 [m/s]
@@ -124,7 +131,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         render_every_cycle: bool = False,
         num_cycles: int = 40,
         collision_params: dict[str, Any] | None = None,
-        object_type: str = 'square_box',
+        object_type: str | list[str] = 'square_box',
         object_ranges: MutableMapping[str, tuple[float, float]] = DEFAULT_OBJECT_RANGES,
         v_max_xy: float = 2.0,
         a_max_xy: float = 10.0,
@@ -181,19 +188,21 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         # Both the object shape and the desired-goal pose are fixed for the duration
         # of an episode, so we build these polygons once in _reset_callback and reuse
         # them every step instead of rebuilding from scratch each time.
-        self._episode_base_poly: sg.MultiPolygon | None = None
-        self._episode_goal_poly: sg.MultiPolygon | None = None
+        self._episode_base_poly: sg.Polygon | sg.MultiPolygon | None = None
+        self._episode_goal_poly: sg.Polygon | sg.MultiPolygon | None = None
         self._episode_desired_goal: np.ndarray | None = None
+        self._episode_object_geoms: np.ndarray | None = None
 
         self.object_sliding_friction = object_sliding_friction
         self.object_torsional_friction = object_torsional_friction
 
         self.impedance_controllers = None
 
-        assert isinstance(object_type, str) and object_type in DEFAULT_OBJECT_TYPES
+        assert isinstance(object_type, (str, list))
+        self.object_types = [object_type] if isinstance(object_type, str) else object_type.copy()
+        assert self.object_types and all(isinstance(shape, str) and shape in DEFAULT_OBJECT_TYPES for shape in self.object_types)
         assert isinstance(object_ranges, MutableMapping) and all(len(value) == 2 for value in object_ranges.values())
 
-        self.object_type = object_type
         self.object_ranges = object_ranges
 
         self.object_width = 0
@@ -315,15 +324,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         self.reload_model()
 
-        # minimum distance between object and mover after env reset
-        max_side = self.object_radius if self.object_type == 'cylinder' else max(self.object_width, self.object_height)
-        max_size = self.mover_size.max(axis=0) if self.mover_size.ndim == 2 else self.mover_size
-
-        side_coll = np.linalg.norm(max_side + max_size[:2], ord=2)
-
-        c_offset = self.c_size + self.c_size_offset if self.c_shape == 'circle' else np.linalg.norm(self.c_size + self.c_size_offset, ord=2)
-
-        self.min_mover_object_dist = np.maximum(side_coll, c_offset)
+        self._update_min_mover_object_dist()
         self.min_object_goal_dist = 0.15
 
         # corrective movements
@@ -335,6 +336,14 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         self.time_to_success_s = -1
         self.num_elapsed_cycles = 0
         self.success_counter = 0
+
+    def _update_min_mover_object_dist(self) -> None:
+        """Update the reset clearance for the current object dimensions."""
+        max_side = self.object_radius if self.object_type == 'cylinder' else max(self.object_width, self.object_height)
+        max_size = self.mover_size.max(axis=0) if self.mover_size.ndim == 2 else self.mover_size
+        side_coll = np.linalg.norm(max_side + max_size[:2], ord=2)
+        c_offset = self.c_size + self.c_size_offset if self.c_shape == 'circle' else np.linalg.norm(self.c_size + self.c_size_offset, ord=2)
+        self.min_mover_object_dist = np.maximum(side_coll, c_offset)
 
     def _compute_default_cam_config(
         self,
@@ -406,18 +415,26 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         def object_masses(shape: str) -> tuple[float, float]:
             """Calculate mass distribution for object components.
 
-            For simple shapes (box, cylinder), returns all mass to the main component.
-            For complex shapes, distributes mass proportionally based on volume.
+            For simple shapes (box, cylinder, triangle), returns all mass to the main component.
+            For composite shapes, distributes mass proportionally based on volume and component counts.
 
             :param shape: the object shape type
-            :return: a tuple of (main_body_mass, segment_mass)
+            :return: a tuple of (mass_per_main_bar, mass_per_segment)
             """
-            if shape in {'square_box', 'box', 'cylinder'}:
+            if shape in {'square_box', 'box', 'cylinder', 'triangle'}:
                 return (self.object_mass, 0)
 
             b_volume = box_volume(self.object_segment_width, self.object_height, self.object_depth)
-            s_volume = box_volume(segment_width_half, self.object_segment_width, self.object_depth)
-            volume = b_volume + {'t_shape': 2, 'plus_shape': 2, 'l_shape': 1}[shape] * s_volume
+            if shape in {'h_shape', 'e_shape', 'o_shape'}:
+                segment_half_width = self.object_width - (1 if shape == 'e_shape' else 2) * self.object_segment_width
+                s_volume = box_volume(segment_half_width, self.object_segment_width, self.object_depth)
+                main_count = 1 if shape == 'e_shape' else 2
+                segment_count = {'h_shape': 1, 'e_shape': 3, 'o_shape': 2}[shape]
+            else:
+                s_volume = box_volume(segment_width_half, self.object_segment_width, self.object_depth)
+                main_count = 1
+                segment_count = {'t_shape': 2, 'plus_shape': 2, 'l_shape': 1}[shape]
+            volume = main_count * b_volume + segment_count * s_volume
 
             return (
                 self.object_mass * (b_volume / volume),
@@ -506,6 +523,21 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                         box_geom(segment_width_half, self.object_segment_width, self.object_depth, masses[1], -segment_pos, 0, 0),
                         box_geom(segment_width_half, self.object_segment_width, self.object_depth, masses[1], segment_pos, 0, 0),
                     ]
+                )
+            case 'triangle':
+                return f'\t\t\t<geom type="mesh" mesh="pushing_triangle" mass="{masses[0]}" />'
+            case 'h_shape' | 'e_shape' | 'o_shape':
+                w, h, s = self.object_width, self.object_height, self.object_segment_width
+                if self.object_type == 'e_shape':
+                    boxes = [(s, h, -w + s, 0)] + [(w - s, s, s, y) for y in (-h + s, 0, h - s)]
+                else:
+                    boxes = [(s, h, -w + s, 0), (s, h, w - s, 0)]
+                    ys = [0] if self.object_type == 'h_shape' else [-h + s, h - s]
+                    boxes += [(w - 2 * s, s, 0, y) for y in ys]
+                main_count = 1 if self.object_type == 'e_shape' else 2
+                return '\n'.join(
+                    box_geom(bw, bh, self.object_depth, masses[0] if idx < main_count else masses[1], x, y)
+                    for idx, (bw, bh, x, y) in enumerate(boxes)
                 )
             case shape:
                 raise ValueError(f'Unsupported object shape {shape}')
@@ -602,6 +634,13 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             '\n\t\t</default>'
         )
 
+        if self.object_type == 'triangle':
+            w, h, d = self.object_width, self.object_height, self.object_depth
+            vertices = ' '.join(f'{x} {y} {z}' for z in (-d, d) for x, y in [(-w, -h), (w, -h), (0, h)])
+            custom_model_xml_strings['custom_assets_xml_str'] = (
+                custom_model_xml_strings.get('custom_assets_xml_str', '') + f'\n\t\t<mesh name="pushing_triangle" vertex="{vertices}" />'
+            )
+
         # object
         custom_worldbody_xml_str = custom_model_xml_strings.get('custom_worldbody_xml_str', None)
         if custom_worldbody_xml_str is not None:
@@ -644,12 +683,45 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         :param options: a dictionary of parameter overrides. Keys can include 'object_type', 'object_start_yaw',
             'object_goal_yaw', and any object property like 'object_width', 'object_height', etc.
+            An explicit 'object_type' overrides the configured selection for this episode, including types outside its list.
         """
+        if 'object_type' in options:
+            object_type = options['object_type']
+        else:
+            object_type = self.object_types[0] if len(self.object_types) == 1 else str(self.np_random.choice(self.object_types))
+        assert isinstance(object_type, str) and object_type in DEFAULT_OBJECT_TYPES
+        self.object_type = object_type
+
+        object_ranges = self.object_ranges
+        if self.object_type in {'h_shape', 'e_shape', 'o_shape'} and object_ranges is DEFAULT_OBJECT_RANGES:
+            object_ranges = {**object_ranges, 'segment_width': (0.01, 0.01)}
+
         self.object_start_yaw = options.get('object_start_yaw', self.np_random.uniform(low=-np.pi, high=np.pi))
         self.object_goal_yaw = options.get('object_goal_yaw', self.np_random.uniform(low=-np.pi, high=np.pi))
 
         for prop in ['width', 'height', 'depth', 'radius', 'segment_width', 'mass']:
-            setattr(self, f'object_{prop}', options.get(f'object_{prop}', self.np_random.uniform(*self.object_ranges[prop])))
+            if self.object_type in {'h_shape', 'e_shape', 'o_shape', 'triangle'} and not np.all(np.isfinite(object_ranges[prop])):
+                raise ValueError(f'{self.object_type}: {prop} range must be finite.')
+            setattr(self, f'object_{prop}', options.get(f'object_{prop}', self.np_random.uniform(*object_ranges[prop])))
+
+        if self.object_type in {'h_shape', 'e_shape', 'o_shape', 'triangle'}:
+            if self.object_type == 'triangle':
+                self.object_height = np.sqrt(3) * self.object_width / 2
+            properties = ['width', 'height', 'depth', 'mass']
+            if self.object_type != 'triangle':
+                properties.append('segment_width')
+            for prop in properties:
+                value = getattr(self, f'object_{prop}')
+                if not np.isfinite(value) or value <= 0:
+                    raise ValueError(f'{self.object_type}: object_{prop} must be finite and positive.')
+            if self.object_type != 'triangle':
+                width_factor = 1 if self.object_type == 'e_shape' else 2
+                height_factor = {'h_shape': 1, 'e_shape': 3, 'o_shape': 2}[self.object_type]
+                if (
+                    self.object_width <= width_factor * self.object_segment_width
+                    or self.object_height <= height_factor * self.object_segment_width
+                ):
+                    raise ValueError(f'{self.object_type}: object_segment_width leaves no open gaps; increase width/height or reduce it.')
 
     def _sample_position_on_tile(self) -> np.ndarray:
         """Sample a random position within a random valid tile, constrained to not extend beyond tile edges.
@@ -695,6 +767,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             )
 
         self._sample_object_params(options)
+        self._update_min_mover_object_dist()
 
         if 'mover_xy_start_pos' in options.keys():
             start_qpos[:, :2] = options['mover_xy_start_pos']
@@ -744,9 +817,12 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
 
         if self.learn_pose:
             episode_geoms = self._geoms(name='object')
+            self._episode_object_geoms = episode_geoms.copy()
             self._episode_base_poly = sg.MultiPolygon(
                 [self._geom_to_shapely(episode_geoms[i]) for i in range(episode_geoms.shape[0]) if episode_geoms[i].any()]
             )
+            if self.object_type in {'h_shape', 'e_shape', 'o_shape'}:
+                self._episode_base_poly = shapely.union_all(self._episode_base_poly.geoms)
             self._episode_desired_goal = np.array(
                 [
                     self.object_xy_goal_pos[0],
@@ -979,8 +1055,8 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
     def _geom_to_shapely(self, geom: np.ndarray) -> sg.Polygon:
         """Convert MuJoCo geometry data to a Shapely polygon.
 
-        :param geom_data: a numpy array containing [type, size_x, size_y, pos_x, pos_y] where type indicates
-            geometry type (6=box, 5=cylinder). Shape: (4,)
+        :param geom: a numpy array containing [type, size_x, size_y, pos_x, pos_y]. Shape: (5,).
+            Geometry types: 6=box, 5=cylinder, 7=equilateral triangle mesh (logical half-width/height).
         :return: a Shapely Polygon representing the geometry
         """
         type, sx, sy, px, py = geom
@@ -992,25 +1068,30 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             case mujoco.mjtGeom.mjGEOM_BOX:  # type: ignore
                 shape = sg.box(-sx, -sy, sx, sy)
 
+            case mujoco.mjtGeom.mjGEOM_MESH:  # type: ignore
+                shape = sg.Polygon([(-sx, -sy), (sx, -sy), (0, sy)])
+
             case _:
                 raise ValueError(f'Unsupported geometry type: {type}')
 
         return shapely.affinity.translate(shape, px, py)
 
-    def _body_to_shapely(self, geoms: np.ndarray, pose: np.ndarray) -> sg.MultiPolygon:
-        """Convert a MuJoCo body to a Shapely polygon representation.
+    def _body_to_shapely(self, geoms: np.ndarray, pose: np.ndarray) -> sg.Polygon | sg.MultiPolygon:
+        """Convert a MuJoCo body's geometry data to a Shapely polygon representation.
 
-        :param body_name: the name of the MuJoCo body to convert
+        :param geoms: the stored geometry data to convert, independently of the current episode's object type
         :param pose: object pose [x, y, sin(yaw), cos(yaw)]. Shape: (4,)
         :return: a Shapely Polygon representing the union of all geometries in the body
         """
         base_poly = sg.MultiPolygon([self._geom_to_shapely(geoms[i]) for i in range(geoms.shape[0]) if geoms[i].any()])
+        if not base_poly.is_valid:
+            base_poly = shapely.union_all(base_poly.geoms)
         return self._pose_poly(base_poly, pose)
 
-    def _pose_poly(self, base_poly: sg.MultiPolygon, pose: np.ndarray) -> sg.MultiPolygon:
+    def _pose_poly(self, base_poly: sg.Polygon | sg.MultiPolygon, pose: np.ndarray) -> sg.Polygon | sg.MultiPolygon:
         """Apply a pose transformation to a base polygon.
 
-        :param base_poly: MultiPolygon in the body's local frame (as returned by _body_to_shapely)
+        :param base_poly: polygon in the body's local frame (as returned by _body_to_shapely)
         :param pose: a numpy array containing [x, y, sin(yaw), cos(yaw)]. Shape: (4,)
         :return: the base polygon rotated and translated to the given world pose
         """
@@ -1043,7 +1124,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         #
         # Both the object's base shape (geoms) and the desired-goal polygon are
         # episode-constant.  When this method is called with the episode's own goal
-        # (batch_size == 1 and desired_goal matches the cached value) we can skip all
+        # (batch_size == 1 and both desired_goal and geoms match the cached values) we can skip all
         # _geom_to_shapely construction and the full goal-polygon build entirely.
         #
         # HER compute_reward calls pass varied desired_goals (and potentially geoms
@@ -1052,6 +1133,7 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             self._episode_base_poly is not None
             and achieved_goal.shape[0] == 1
             and np.array_equal(desired_goal[0], self._episode_desired_goal)
+            and np.array_equal(object_geoms[0], self._episode_object_geoms)
         ):
             object_poly = self._pose_poly(self._episode_base_poly, achieved_goal[0])
             return np.array(
@@ -1277,22 +1359,17 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
         :param name: the name of the MuJoCo body to extract geometries from
         :return: a numpy array of shape (max_num_geoms, 5) containing geometry data.
             Each row contains [type, size_x, size_y, pos_x, pos_y]. Unused rows are zero-filled.
-            Geometry types: 6=box, 5=cylinder
+            Geometry types: 6=box, 5=cylinder, 7=triangle mesh. Triangle sizes/positions use the
+            logical body frame, before MuJoCo centers and rotates the mesh during compilation.
         """
         body = self.model.body(name)
 
-        max_num_geoms = 3
+        max_num_geoms = max(3, int(body.geomnum[0]))
         geoms = np.zeros((max_num_geoms, 5))
 
         geom_idx = 0
         for geom_id in range(self.model.ngeom):
             if self.model.geom_bodyid[geom_id] == body.id:
-                if geom_idx >= max_num_geoms:
-                    logger.warn(
-                        f"Body '{name}' has more than {max_num_geoms} geometries. Only the first {max_num_geoms} will be processed."
-                    )
-                    break
-
                 geom = self.model.geom(geom_id)
                 if isinstance(geom.type, np.ndarray):
                     assert geom.type.shape == (1,)
@@ -1301,6 +1378,8 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
                     geoms[geom_idx, 0] = geom.type
                 geoms[geom_idx, 1:3] = geom.size[:2]
                 geoms[geom_idx, 3:5] = geom.pos[:2]
+                if self.object_type == 'triangle' and int(geoms[geom_idx, 0]) == mujoco.mjtGeom.mjGEOM_MESH:
+                    geoms[geom_idx, 1:] = [self.object_width, self.object_height, 0, 0]
                 geom_idx += 1
 
         return geoms
@@ -1430,13 +1509,15 @@ class StateBasedGlobalPushingEnv(BasicMagBotSingleAgentEnv):
             mover_collisions = np.zeros(batch_size).astype(bool)
             wall_collisions = np.zeros(batch_size).astype(bool)
             if self.learn_pose:
-                object_geoms = np.zeros((batch_size, 3, 5), np.float32)
+                max_num_geoms = max(item['object_geoms'].shape[0] for item in info)
+                object_geoms = np.zeros((batch_size, max_num_geoms, 5), np.float32)
 
             for i in range(0, batch_size):
                 mover_collisions[i] = info[i]['mover_collision']
                 wall_collisions[i] = info[i]['wall_collision']
                 if self.learn_pose:
-                    object_geoms[i] = info[i]['object_geoms']
+                    geoms = info[i]['object_geoms']
+                    object_geoms[i, : geoms.shape[0]] = geoms
         else:
             assert isinstance(info, dict)
             batch_size = 1
