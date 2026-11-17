@@ -19,9 +19,9 @@ Bug Fixes
 2. Fixed some minor discontinuity issues in edge cases:
     - Numerical rounding issue for z_p_min (in ``GripperMagBotsAPM4330Params``)
     - Finger distance to angle calculation now became c2 smooth (in ``GripperMagBotsAPM4330``)
-3. Fixed stale rendering resources in ``MujocoViewerCollection`` after model reloads, which could 
-4. Fix damping calculation for rotational component together with corresponding env examples (in ``MoverImpedanceController``)
+3. Fixed stale rendering resources in ``MujocoViewerCollection`` after model reloads, which could
    cause missing objects or incorrectly displayed meshes.
+4. Fix damping calculation for rotational component together with corresponding env examples (in ``MoverImpedanceController``)
 
 Release v1.3.0 (2026-09-11)
 ---------------------------
