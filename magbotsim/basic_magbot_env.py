@@ -164,6 +164,11 @@ class BasicMagBotEnv:
         profile frame, defaults to False. Profiles stay outside the tile footprints and have a fixed width of 0.05 m and height
         of 0.10 m. Their top is 0.065 m above the tile surface (world z=0), with the bottom at z=-0.035 m. Rectangular tiles are supported.
         Raises ValueError if a section is too short or the frame would overlap tiles or other frame sections.
+    :param rotation_points: a numpy array of shape (num_points,2) containing the (x,y) positions at which a full 360° rotation of a
+        mover is possible, or None. These points are used by ``check_mover_rotation()`` and ``full_rotation_possible()`` to model
+        rotation limitations of a MagLev system. If set to None, the points returned by ``get_tile_rotation_points()`` are used,
+        which model one possible rotation limitation; defaults to None. The points can also be changed later using the
+        ``rotation_points`` attribute.
     """
 
     metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
@@ -187,6 +192,7 @@ class BasicMagBotEnv:
         custom_model_xml_strings: dict[str, str] | None = None,
         use_mj_passive_viewer: bool = False,
         use_profile_frame: bool = False,
+        rotation_points: np.ndarray | None = None,
     ) -> None:
         # rng
         self.rng_noise = np.random.default_rng()
@@ -237,6 +243,8 @@ class BasicMagBotEnv:
         self.layout_tiles_wc = np.pad(layout_tiles, ((0, 1), (0, 1)), mode='constant', constant_values=0)
         # precomputed wall-segment lookup table for qpos_is_valid
         self.walls_per_tile, self.n_walls_per_tile = self._precompute_wall_segments_fast()
+        # positions at which a full 360° rotation of a mover is possible (rotation limitations)
+        self.rotation_points = self.get_tile_rotation_points() if rotation_points is None else rotation_points
 
         # mover configuration
         self.num_movers = num_movers
@@ -614,6 +622,92 @@ class BasicMagBotEnv:
 
         return 1 - self.qpos_is_valid(mover_qpos, c_size, add_safety_offset)
 
+    def check_mover_rotation(
+        self,
+        mover_names: list[str],
+        mover_qpos: np.ndarray | None = None,
+        add_qpos_noise: bool = False,
+        tol: float = 0.001,
+        max_yaw_deviation: float = np.deg2rad(10.0),
+    ) -> np.ndarray:
+        """Check whether the movers specified in ``mover_names`` violate the rotation limits around the z-axis (yaw). Depending on
+        the MagLev system, a full 360° rotation of a mover may only be possible at certain positions. This method models such
+        limitations as follows: a full rotation is possible if the mover is within ``tol`` of one of the ``rotation_points``
+        (see ``full_rotation_possible()``). At all other positions, the yaw of a mover may deviate at most ``max_yaw_deviation``
+        from the nearest multiple of 90°.
+
+        :param mover_names: a list of mover names that should be checked (correspond to the body name of the mover in
+            the MuJoCo model)
+        :param mover_qpos: a numpy array of shape (num_movers,7) containing the qpos (x_p,y_p,z_p,w_o,x_o,y_o,z_o) of each mover or
+            None. If set to None, the current qpos of each mover in the MuJoCo model is used; defaults to None
+        :param add_qpos_noise: whether to add Gaussian noise to the qpos of the movers, defaults to False. Only used if mover_qpos is
+            None.
+        :param tol: the maximum (x,y) distance between the center of a mover and a rotation point at which a full rotation is still
+            possible, defaults to 0.001 [m]
+        :param max_yaw_deviation: the maximum deviation of the yaw from the nearest multiple of 90° if the mover is not at a rotation
+            point, defaults to 10° (in rad)
+        :return: a numpy array of shape (num_movers,), where an element is True if the rotation limit of the mover is violated,
+            otherwise False
+        """
+        if mover_qpos is None:
+            mover_qpos = self.get_mover_qpos(mover_names=mover_names, add_noise=add_qpos_noise)
+
+        assert mover_qpos.shape == (len(mover_names), 7)
+
+        # yaw angle extracted from quaternion stored as (w, qx, qy, qz) at indices 3-6
+        w_q = mover_qpos[:, 3]
+        q_x = mover_qpos[:, 4]
+        q_y = mover_qpos[:, 5]
+        q_z = mover_qpos[:, 6]
+        yaw = np.arctan2(2.0 * (w_q * q_z + q_x * q_y), 1.0 - 2.0 * (q_y * q_y + q_z * q_z))
+        # deviation from the nearest multiple of 90° in [-45°, 45°)
+        yaw_deviation = np.mod(yaw + np.pi / 4, np.pi / 2) - np.pi / 4
+
+        return ~self.full_rotation_possible(qpos=mover_qpos, tol=tol) & (np.abs(yaw_deviation) > max_yaw_deviation)
+
+    def full_rotation_possible(self, qpos: np.ndarray, tol: float = 0.001) -> np.ndarray:
+        """Check whether a full 360° rotation around the z-axis is possible at the (x,y) positions specified in ``qpos``, i.e.
+        whether the (x,y) distance between a position and at least one of the ``rotation_points`` is at most ``tol``. The
+        rotation points can be arbitrary positions. To model rotation limitations that cannot be described by points, e.g.
+        rotation areas, this method can be overridden (it is also used by ``check_mover_rotation()``).
+
+        This method allows to check multiple qpos at the same time. The orientation of the mover is ignored.
+
+        :param qpos: a numpy array of shape (num_qpos,7) containing the qpos (x_p,y_p,z_p,w_o,x_o,y_o,z_o) to be checked
+        :param tol: the maximum (x,y) distance between a position and a rotation point at which a full rotation is still possible,
+            defaults to 0.001 [m]
+        :return: a numpy array of shape (num_qpos,), where an element is True if a full rotation is possible, otherwise False
+        """
+        assert len(qpos.shape) == 2 and qpos.shape[1] == 7
+        assert tol >= 0.0, 'The tolerance must be non-negative.'
+
+        # squared (x,y) distances between all positions and all rotation points, shape (num_qpos, num_points)
+        diff = qpos[:, np.newaxis, :2] - self.rotation_points[np.newaxis, :, :]
+        dist_sq = np.sum(diff * diff, axis=2)
+
+        # without rotation points, np.any over the empty axis returns False for all positions
+        return np.any(dist_sq <= tol**2, axis=1)
+
+    @property
+    def rotation_points(self) -> np.ndarray:
+        """The (x,y) positions at which a full 360° rotation of a mover is possible, as a numpy array of shape (num_points,2).
+        These points are used by ``check_mover_rotation()`` and ``full_rotation_possible()``. By default, the points returned by
+        ``get_tile_rotation_points()`` are used, which model one possible rotation limitation. To model a different limitation,
+        assign arbitrary points, e.g. ``env.rotation_points = np.array([[0.36, 0.36], [0.5, 0.42]])``. If no points are
+        specified (empty array), a full rotation is not possible anywhere.
+        """
+        return self._rotation_points
+
+    @rotation_points.setter
+    def rotation_points(self, rotation_points: np.ndarray) -> None:
+        rotation_points = np.asarray(rotation_points, dtype=np.float64)
+        if rotation_points.size == 0:
+            rotation_points = rotation_points.reshape((0, 2))
+        assert rotation_points.ndim == 2 and rotation_points.shape[1] == 2, (
+            f'rotation_points must be a numpy array of shape (num_points,2), got shape {rotation_points.shape}.'
+        )
+        self._rotation_points = rotation_points
+
     def qpos_is_valid(self, qpos: np.ndarray, c_size: float | np.ndarray, add_safety_offset: bool = False) -> np.ndarray:
         """Check whether qpos is valid. This method considers the edges as imaginary walls if there is no other tile next to that
         edge. A position is valid if it is above a tile and the distance to the walls is greater that the required safety margin,
@@ -915,6 +1009,32 @@ class BasicMagBotEnv:
                 walls_per_tile[i, j, :n, :] = np.array(segs, dtype=np.float64)
 
         return walls_per_tile, n_walls_per_tile
+
+    def get_tile_rotation_points(self) -> np.ndarray:
+        """Return the default rotation points (see ``rotation_points``), which model one possible rotation limitation of a MagLev
+        system: a full 360° rotation of a mover is only possible at the center, the four corners, and the four edge midpoints of a
+        tile, and only if the mover fully covers existing tiles there. A rotation point must be surrounded by tiles, i.e. points at
+        the border of the tile layout or next to an absent tile are no rotation points.
+        This assumes that the rotating mover does not reach beyond the tiles touching the point, which holds for
+        movers whose half-diagonal is smaller than half a tile.
+
+        :return: a numpy array of shape (num_points,2) containing the (x,y) positions of the rotation points
+        """
+        # Candidate points form a grid spaced half a tile apart: the point with index (m, n) is located at
+        # (m * tile_size[0], n * tile_size[1]) relative to the upper left corner of the tile layout, and tile (i, j) touches
+        # the points with indices m in [2i, 2i+2] and n in [2j, 2j+2].
+        mask = np.ones((2 * self.num_tiles_x + 1, 2 * self.num_tiles_y + 1), dtype=bool)
+        # points at the border of the layout touch tiles outside the layout
+        mask[[0, -1], :] = False
+        mask[:, [0, -1]] = False
+        # points touched by an absent tile
+        for i, j in zip(*np.nonzero(self.layout_tiles == 0), strict=True):
+            mask[2 * i : 2 * i + 3, 2 * j : 2 * j + 3] = False
+        m, n = np.nonzero(mask)
+
+        origin_x = self.x_pos_tiles[0, 0] - self.tile_size[0]
+        origin_y = self.y_pos_tiles[0, 0] - self.tile_size[1]
+        return np.stack([origin_x + m * self.tile_size[0], origin_y + n * self.tile_size[1]], axis=1)
 
     ###################################################
     # MuJoCo                                          #
