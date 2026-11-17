@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Pre-Release v1.4.0a3 (2026-11-11)
+Pre-Release v1.4.0a5 (2026-11-17)
 ---------------------------------
 
 General
@@ -12,6 +12,14 @@ General
     - Added H-, E-, and O-shaped objects and equilateral triangular prisms with configurable dimensions and mass.
     - Added random object type selection on reset from a configured list, with explicit reset overrides taking precedence.
     - Fixed pose reward calculations to use the geometry stored with each transition, independently of the current episode’s object type.
+3. Added ``check_mover_rotation()`` and ``full_rotation_possible()`` to ``BasicMagBotEnv`` to check rotation limitations that some
+   MagLev systems may have: a full 360° rotation is only possible within a tolerance ``tol`` around configurable rotation points
+   (``rotation_points``). At all other positions, the yaw may deviate at most ``max_yaw_deviation`` (default: ±10°) from the nearest
+   multiple of 90°. By default, ``get_tile_rotation_points()`` provides one possible variant of such a limitation: the center,
+   corners, and edge midpoints of a tile, if the mover fully covers existing tiles there, i.e. not at the border of the tile
+   layout or next to absent tiles.
+   The rotation points can be specified via the ``rotation_points`` parameter of ``BasicMagBotEnv``, ``BasicMagBotSingleAgentEnv``,
+   and ``BasicMagBotMultiAgentEnv``.
 
 Bug Fixes
 ^^^^^^^^^
@@ -19,8 +27,9 @@ Bug Fixes
 2. Fixed some minor discontinuity issues in edge cases:
     - Numerical rounding issue for z_p_min (in ``GripperMagBotsAPM4330Params``)
     - Finger distance to angle calculation now became c2 smooth (in ``GripperMagBotsAPM4330``)
-3. Fixed stale rendering resources in ``MujocoViewerCollection`` after model reloads, which could 
+3. Fixed stale rendering resources in ``MujocoViewerCollection`` after model reloads, which could
    cause missing objects or incorrectly displayed meshes.
+4. Fix damping calculation for rotational component together with corresponding env examples (in ``MoverImpedanceController``)
 
 Release v1.3.0 (2026-09-11)
 ---------------------------
