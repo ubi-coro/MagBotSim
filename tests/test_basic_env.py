@@ -9,7 +9,7 @@ import pytest
 from shapely.geometry import box
 from shapely.ops import unary_union
 
-from magbotsim import BasicMagBotEnv, BasicMagBotMultiAgentEnv
+from magbotsim import BasicMagBotEnv, BasicMagBotMultiAgentEnv, BasicMagBotSingleAgentEnv
 
 
 @pytest.mark.parametrize(
@@ -2189,6 +2189,43 @@ def test_custom_rotation_points():
         env_default.rotation_points = np.array([0.3, 0.3])
     with pytest.raises(AssertionError):
         BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None, rotation_points=np.zeros((2, 3)))
+
+
+class _MinimalSingleAgentEnv(BasicMagBotSingleAgentEnv):
+    """Minimal concrete ``BasicMagBotSingleAgentEnv`` (the abstract methods are not used by the tests)."""
+
+    def _get_obs(self):
+        return np.zeros(0)
+
+    def _get_info(self, *args, **kwargs):
+        return {}
+
+    def compute_reward(self, *args, **kwargs):
+        return 0.0
+
+    def compute_terminated(self, *args, **kwargs):
+        return False
+
+    def compute_truncated(self, *args, **kwargs):
+        return False
+
+
+@pytest.mark.parametrize('env_cls', [_MinimalSingleAgentEnv, BasicMagBotMultiAgentEnv], ids=['single_agent', 'multi_agent'])
+def test_rotation_points_forwarded_by_rl_base_envs(env_cls):
+    custom_points = np.array([[0.30, 0.30], [0.4237, 0.1]])
+
+    env = env_cls(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None, rotation_points=custom_points)
+    try:
+        assert np.allclose(env.rotation_points, custom_points)
+    finally:
+        env.close()
+
+    # default: tile rotation points
+    env = env_cls(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None)
+    try:
+        assert np.allclose(_sorted_points(env.rotation_points), _sorted_points(env.get_tile_rotation_points()))
+    finally:
+        env.close()
 
 
 @pytest.mark.parametrize(
