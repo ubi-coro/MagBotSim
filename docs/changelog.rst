@@ -18,6 +18,8 @@ General
    multiple of 90°. By default, ``get_tile_rotation_points()`` provides one possible variant of such a limitation: the center,
    corners, and edge midpoints of a tile, if the mover fully covers existing tiles there, i.e. not at the border of the tile
    layout or next to absent tiles.
+   The rotation points can be specified via the ``rotation_points`` parameter of ``BasicMagBotEnv``, ``BasicMagBotSingleAgentEnv``,
+   and ``BasicMagBotMultiAgentEnv``.
 
 Bug Fixes
 ^^^^^^^^^
