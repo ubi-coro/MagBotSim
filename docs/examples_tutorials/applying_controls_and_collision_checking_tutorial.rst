@@ -145,7 +145,7 @@ movers and tiles have simple shapes, such as cuboids or cylinders, which signifi
 collision checking problem. In addition, safety margins around a mover can be easily changed without 
 requiring building and compiling a new MuJoCo model. The collision shapes, sizes, and additional margins
 can be configured using the ``collision_params``. Please refer to the :ref:`basic_magbot_env` 
-documentation for more information about the ``collision_params``, ``check_wall_collision()``, and 
+documentation for more information about the ``collision_params``, ``check_wall_collision()``, and
 ``check_mover_collision()`` methods.
 
 The complete code for the ``PandaBoxExampleEnv`` can be found `here <https://github.com/ubi-coro/MagBotSim/blob/main/magbotsim/envs_without_rl_api/object_manipulation/panda_box_env.py>`_.

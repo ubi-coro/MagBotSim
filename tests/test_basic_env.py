@@ -9,7 +9,7 @@ import pytest
 from shapely.geometry import box
 from shapely.ops import unary_union
 
-from magbotsim import BasicMagBotEnv, BasicMagBotMultiAgentEnv
+from magbotsim import BasicMagBotEnv, BasicMagBotMultiAgentEnv, BasicMagBotSingleAgentEnv
 
 
 @pytest.mark.parametrize(
@@ -2113,6 +2113,211 @@ def test_mover_position_is_valid_check(layout_tiles, qpos, collision_params, add
     assert len(pos_is_valid.shape) == 1
     assert pos_is_valid.shape[0] == num_qpos
     assert (pos_is_valid == expected_result).all()
+
+
+# 3x3 layout with absent tile (2, 2); tile size 0.24 m -> tile centers at 0.12, 0.36, 0.60 m
+ROTATION_TEST_LAYOUT = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 0]])
+
+
+def _qpos_from_xy_yaw(xy: list, yaw_deg: list | float = 0.0) -> np.ndarray:
+    """Build qpos of shape (num_qpos, 7) from (x, y) positions and yaw angles in degrees."""
+    xy = np.asarray(xy, dtype=np.float64).reshape(-1, 2)
+    yaw = np.deg2rad(np.broadcast_to(np.asarray(yaw_deg, dtype=np.float64), (xy.shape[0],)))
+    qpos = np.zeros((xy.shape[0], 7))
+    qpos[:, :2] = xy
+    qpos[:, 3] = np.cos(yaw / 2)
+    qpos[:, 6] = np.sin(yaw / 2)
+    return qpos
+
+
+def _sorted_points(points: np.ndarray) -> np.ndarray:
+    """Sort (x, y) points lexicographically for order-independent comparisons."""
+    return points[np.lexsort((points[:, 1], points[:, 0]))]
+
+
+@pytest.mark.parametrize(
+    'layout_tiles, expected_indices',
+    [
+        # points at the border of the layout and points touching the absent tile (2, 2) are no rotation points
+        (ROTATION_TEST_LAYOUT, [(m, n) for m in range(1, 6) for n in range(1, 6) if not (m >= 4 and n >= 4)]),
+        # complete layout: all points except the ones at the border
+        (np.ones((2, 3)), [(m, n) for m in range(1, 4) for n in range(1, 6)]),
+        # single tile: only the center
+        (np.ones((1, 1)), [(1, 1)]),
+    ],
+)
+def test_get_default_tile_rotation_points(layout_tiles, expected_indices):
+    env = BasicMagBotEnv(layout_tiles=layout_tiles, num_movers=1, render_mode=None)
+    # candidate points are spaced half a tile (0.12 m) apart
+    expected = np.array(expected_indices, dtype=np.float64) * 0.12
+
+    points = env.get_default_tile_rotation_points()
+
+    assert points.shape == (len(expected_indices), 2)
+    assert np.allclose(_sorted_points(points), _sorted_points(expected))
+    # used by default
+    assert np.allclose(_sorted_points(env.rotation_points), _sorted_points(expected))
+
+
+def test_custom_rotation_points():
+    custom_points = np.array([[0.30, 0.30], [0.4237, 0.1]])  # not on the half-tile grid
+
+    # via constructor
+    env = BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None, rotation_points=custom_points)
+    assert np.allclose(env.rotation_points, custom_points)
+    qpos = _qpos_from_xy_yaw([[0.30, 0.30], [0.4245, 0.1], [0.36, 0.36]], yaw_deg=45.0)
+    assert (env.full_rotation_possible(qpos=qpos) == np.array([True, True, False])).all()
+    for qpos_i, expected in zip(qpos, [False, False, True], strict=True):
+        assert env.check_mover_rotation(mover_names=env.mover_names, mover_qpos=qpos_i[np.newaxis, :])[0] == expected
+
+    # via attribute (e.g. for environments that do not forward the constructor parameter)
+    env_default = BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None)
+    assert (env_default.full_rotation_possible(qpos=qpos) == np.array([False, False, True])).all()
+    env_default.rotation_points = custom_points.tolist()
+    assert env_default.rotation_points.shape == (2, 2)
+    assert (env_default.full_rotation_possible(qpos=qpos) == np.array([True, True, False])).all()
+
+    # no rotation points: a full rotation is not possible anywhere
+    env_default.rotation_points = np.empty((0, 2))
+    assert not env_default.full_rotation_possible(qpos=qpos).any()
+    env_default.rotation_points = []
+    assert env_default.rotation_points.shape == (0, 2)
+    assert env_default.check_mover_rotation(mover_names=env_default.mover_names, mover_qpos=qpos[2:])[0]
+
+    # invalid shapes
+    with pytest.raises(AssertionError):
+        env_default.rotation_points = np.array([0.3, 0.3])
+    with pytest.raises(AssertionError):
+        BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None, rotation_points=np.zeros((2, 3)))
+
+
+class _MinimalSingleAgentEnv(BasicMagBotSingleAgentEnv):
+    """Minimal concrete ``BasicMagBotSingleAgentEnv`` (the abstract methods are not used by the tests)."""
+
+    def _get_obs(self):
+        return np.zeros(0)
+
+    def _get_info(self, *args, **kwargs):
+        return {}
+
+    def compute_reward(self, *args, **kwargs):
+        return 0.0
+
+    def compute_terminated(self, *args, **kwargs):
+        return False
+
+    def compute_truncated(self, *args, **kwargs):
+        return False
+
+
+@pytest.mark.parametrize('env_cls', [_MinimalSingleAgentEnv, BasicMagBotMultiAgentEnv], ids=['single_agent', 'multi_agent'])
+def test_rotation_points_forwarded_by_rl_base_envs(env_cls):
+    custom_points = np.array([[0.30, 0.30], [0.4237, 0.1]])
+
+    env = env_cls(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None, rotation_points=custom_points)
+    try:
+        assert np.allclose(env.rotation_points, custom_points)
+    finally:
+        env.close()
+
+    # default: tile rotation points
+    env = env_cls(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None)
+    try:
+        assert np.allclose(_sorted_points(env.rotation_points), _sorted_points(env.get_default_tile_rotation_points()))
+    finally:
+        env.close()
+
+
+@pytest.mark.parametrize(
+    'xy, tol, expected',
+    [
+        # nine points of tile (1, 1); corner (0.48, 0.48) touches the absent tile (2, 2)
+        (
+            [[0.36, 0.36], [0.24, 0.24], [0.48, 0.24], [0.24, 0.48], [0.48, 0.48], [0.36, 0.24], [0.36, 0.48], [0.24, 0.36], [0.48, 0.36]],
+            0.001,
+            [True, True, True, True, False, True, True, True, True],
+        ),
+        # tile centers at the layout border are rotation points (the mover covers only one tile)
+        ([[0.12, 0.12], [0.12, 0.60], [0.60, 0.12], [0.60, 0.36]], 0.001, [True] * 4),
+        # corners and edge midpoints at the layout border are no rotation points (the mover would not fully cover tiles)
+        ([[0.0, 0.0], [0.72, 0.0], [0.0, 0.12], [0.36, 0.72], [0.0, 0.24]], 0.001, [False] * 5),
+        # default tolerance (Euclidean distance)
+        ([[0.3609, 0.36], [0.3611, 0.36], [0.36, 0.3591], [0.3608, 0.3608]], 0.001, [True, False, True, False]),
+        # custom tolerance
+        ([[0.363, 0.36], [0.36, 0.366]], 0.005, [True, False]),
+        # (almost) zero tolerance
+        ([[0.36, 0.36], [0.3601, 0.36]], 1e-9, [True, False]),
+        # arbitrary positions on tiles
+        ([[0.30, 0.30], [0.18, 0.36], [0.12, 0.06]], 0.001, [False] * 3),
+        # no point touching the absent tile (2, 2) is a rotation point
+        (
+            [[0.60, 0.60], [0.72, 0.60], [0.60, 0.72], [0.72, 0.72], [0.60, 0.48], [0.48, 0.60], [0.48, 0.48], [0.72, 0.48]],
+            0.001,
+            [False] * 8,
+        ),
+        # outside the layout
+        ([[-0.24, 0.12], [0.12, 0.96], [-0.0005, 0.0]], 0.001, [False] * 3),
+    ],
+)
+def test_full_rotation_possible(xy, tol, expected):
+    env = BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None)
+    qpos = _qpos_from_xy_yaw(xy, yaw_deg=30.0)
+
+    result = env.full_rotation_possible(qpos=qpos, tol=tol)
+
+    assert result.shape == (len(xy),)
+    assert result.dtype == bool
+    assert (result == np.array(expected)).all()
+
+
+@pytest.mark.parametrize(
+    'xy, yaw_deg, kwargs, expected',
+    [
+        # rotation point: any yaw is allowed
+        ([0.36, 0.36], [0, 10.5, 45, 135, -170, 359], {}, [False] * 6),
+        ([0.24, 0.48], [45], {}, [False]),
+        # no rotation point: yaw must be within 10° of the nearest multiple of 90°
+        (
+            [0.30, 0.30],
+            [0, 5, -9.9, 10.5, -10.5, 45, 85, 95, -95, 180, 189, 200, 275],
+            {},
+            [False, False, False, True, True, True, False, False, False, False, False, True, False],
+        ),
+        # custom yaw limit
+        ([0.30, 0.30], [5, 15, 25, -25], {'max_yaw_deviation': np.deg2rad(20.0)}, [False, False, True, True]),
+        # tolerance
+        ([0.362, 0.36], [45], {}, [True]),
+        ([0.362, 0.36], [45], {'tol': 0.005}, [False]),
+        # center of the absent tile, corner next to the absent tile, and edge midpoint at the layout border are no rotation points
+        ([0.60, 0.60], [45], {}, [True]),
+        ([0.48, 0.48], [5, 45], {}, [False, True]),
+        ([0.0, 0.36], [5, 45], {}, [False, True]),
+    ],
+)
+def test_check_mover_rotation(xy, yaw_deg, kwargs, expected):
+    env = BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None)
+
+    for yaw, exp in zip(yaw_deg, expected, strict=True):
+        mover_qpos = _qpos_from_xy_yaw([xy], yaw_deg=yaw)
+        result = env.check_mover_rotation(mover_names=env.mover_names, mover_qpos=mover_qpos, **kwargs)
+        assert result.shape == (1,)
+        assert result[0] == exp, f'xy={xy}, yaw={yaw}°: expected {exp}, got {result[0]}'
+
+
+def test_check_mover_rotation_current_qpos():
+    # movers are placed in the tile centers by default
+    env = BasicMagBotEnv(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=2, render_mode=None)
+    result = env.check_mover_rotation(mover_names=env.mover_names)
+    assert result.shape == (2,)
+    assert not result.any()
+
+    # move mover 1 off the rotation point and rotate it by 45° -> violation
+    env.data.qpos[env.mover_qpos_indices[1]] = _qpos_from_xy_yaw([[0.15, 0.36]], yaw_deg=45.0)[0] + np.array(
+        [0, 0, env.data.qpos[env.mover_qpos_indices[1, 2]], 0, 0, 0, 0]
+    )
+    result = env.check_mover_rotation(mover_names=env.mover_names)
+    assert (result == np.array([False, True])).all()
+    assert (env.check_mover_rotation(mover_names=[env.mover_names[1]]) == np.array([True])).all()
 
 
 def _frame_geom_bounds(env, prefix):

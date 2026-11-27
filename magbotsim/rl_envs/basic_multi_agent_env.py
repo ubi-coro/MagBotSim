@@ -58,6 +58,11 @@ class BasicMagBotMultiAgentEnv(BasicMagBotEnv, ParallelEnv):
     :param use_mj_passive_viewer: whether the MuJoCo passive_viewer should be used, defaults to False. If set to False, the Gymnasium
         MuJoCo WindowViewer with custom overlays is used.
     :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
+    :param rotation_points: a numpy array of shape (num_points,2) containing the (x,y) positions at which a full 360° rotation of a
+        mover is possible, or None; defaults to None. If set to None, the rotation points of the
+        APS4322-0000-0000 (240mm tiles Beckhoff XPlanar) are configured for rotation limit checking. Note that rotation points are always
+        set, but the check is only executed, if ``check_mover_rotation()`` is called in a custom environment.
+        See ``BasicMagBotEnv`` for more information about rotation limitations.
     """
 
     def __init__(
@@ -79,6 +84,7 @@ class BasicMagBotMultiAgentEnv(BasicMagBotEnv, ParallelEnv):
         custom_model_xml_strings: dict[str, str] | None = None,
         use_mj_passive_viewer: bool = False,
         use_profile_frame: bool = False,
+        rotation_points: np.ndarray | None = None,
     ) -> None:
         super().__init__(
             layout_tiles=layout_tiles,
@@ -98,6 +104,7 @@ class BasicMagBotMultiAgentEnv(BasicMagBotEnv, ParallelEnv):
             custom_model_xml_strings=custom_model_xml_strings,
             use_mj_passive_viewer=use_mj_passive_viewer,
             use_profile_frame=use_profile_frame,
+            rotation_points=rotation_points,
         )
 
         self.agents = self.mover_names
