@@ -59,7 +59,9 @@ class BasicMagBotMultiAgentEnv(BasicMagBotEnv, ParallelEnv):
         MuJoCo WindowViewer with custom overlays is used.
     :param use_profile_frame: whether to add the collision-enabled profile frame, defaults to False
     :param rotation_points: a numpy array of shape (num_points,2) containing the (x,y) positions at which a full 360° rotation of a
-        mover is possible, or None. If set to None, the points returned by ``get_tile_rotation_points()`` are used; defaults to None.
+        mover is possible, or None; defaults to None. If set to None, the rotation points of the
+        APS4322-0000-0000 (240mm tiles Beckhoff XPlanar) are configured for rotation limit checking. Note that rotation points are always
+        set, but the check is only executed, if ``check_mover_rotation()`` is called in a custom environment.
         See ``BasicMagBotEnv`` for more information about rotation limitations.
     """
 

@@ -254,7 +254,7 @@ class BasicMagBotEnv:
             )
             self.rotation_points = rotation_points
         else:
-            self.rotation_points = self.get_tile_rotation_points()
+            self.rotation_points = self.get_default_tile_rotation_points()
 
         # mover configuration
         self.num_movers = num_movers
@@ -1000,7 +1000,7 @@ class BasicMagBotEnv:
 
         return walls_per_tile, n_walls_per_tile
 
-    def get_tile_rotation_points(self) -> np.ndarray:
+    def get_default_tile_rotation_points(self) -> np.ndarray:
         """Return the default rotation points (see ``rotation_points``), which model one possible rotation limitation of a MagLev
         system: a full 360° rotation of a mover is only possible at the center, the four corners, and the four edge midpoints of a
         tile, and only if the mover fully covers existing tiles there. A rotation point must be surrounded by tiles, i.e. points at

@@ -2146,12 +2146,12 @@ def _sorted_points(points: np.ndarray) -> np.ndarray:
         (np.ones((1, 1)), [(1, 1)]),
     ],
 )
-def test_get_tile_rotation_points(layout_tiles, expected_indices):
+def test_get_default_tile_rotation_points(layout_tiles, expected_indices):
     env = BasicMagBotEnv(layout_tiles=layout_tiles, num_movers=1, render_mode=None)
     # candidate points are spaced half a tile (0.12 m) apart
     expected = np.array(expected_indices, dtype=np.float64) * 0.12
 
-    points = env.get_tile_rotation_points()
+    points = env.get_default_tile_rotation_points()
 
     assert points.shape == (len(expected_indices), 2)
     assert np.allclose(_sorted_points(points), _sorted_points(expected))
@@ -2223,7 +2223,7 @@ def test_rotation_points_forwarded_by_rl_base_envs(env_cls):
     # default: tile rotation points
     env = env_cls(layout_tiles=ROTATION_TEST_LAYOUT, num_movers=1, render_mode=None)
     try:
-        assert np.allclose(_sorted_points(env.rotation_points), _sorted_points(env.get_tile_rotation_points()))
+        assert np.allclose(_sorted_points(env.rotation_points), _sorted_points(env.get_default_tile_rotation_points()))
     finally:
         env.close()
 
