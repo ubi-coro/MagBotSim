@@ -42,3 +42,7 @@ Limitations that cannot be described by points, e.g. rotation areas, can be mode
 ``full_rotation_possible()``, which is used by ``check_mover_rotation()``. If you only want to know whether a full
 rotation is possible at certain positions, e.g. to plan where a mover should rotate, you can also use
 ``full_rotation_possible()`` directly. It ignores the orientation of the movers.
+
+.. note::
+    Rotation points are always configured in the :ref:`basic_magbot_env`, but the check is only executed, if ``check_mover_rotation()``
+    is called in a custom environment.

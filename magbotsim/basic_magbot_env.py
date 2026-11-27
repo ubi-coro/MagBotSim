@@ -165,10 +165,11 @@ class BasicMagBotEnv:
         of 0.10 m. Their top is 0.065 m above the tile surface (world z=0), with the bottom at z=-0.035 m. Rectangular tiles are supported.
         Raises ValueError if a section is too short or the frame would overlap tiles or other frame sections.
     :param rotation_points: a numpy array of shape (num_points,2) containing the (x,y) positions at which a full 360° rotation of a
-        mover is possible, or None. These points are used by ``check_mover_rotation()`` and ``full_rotation_possible()`` to model
-        rotation limitations of a MagLev system. If set to None, the points returned by ``get_tile_rotation_points()`` are used,
-        which model one possible rotation limitation; defaults to None. The points can also be changed later using the
-        ``rotation_points`` attribute.
+        mover is possible, or None; defaults to None. These points are used by ``check_mover_rotation()`` and ``full_rotation_possible()`` to model
+        rotation limitations of a MagLev system. If set to None, the rotation points of the APS4322-0000-0000 (240mm tiles Beckhoff XPlanar)
+        are configured for rotation limit checking. The points can also be changed later using the ``rotation_points`` attribute. 
+        Note that rotation points are always set, but the check is only executed, if ``check_mover_rotation()``
+        is called in a custom environment.
     """
 
     metadata = {'render_modes': ['human', 'rgb_array'], 'render_fps': 60}
