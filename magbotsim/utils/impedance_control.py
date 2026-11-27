@@ -114,10 +114,10 @@ class MoverImpedanceController:
         rotational stiffness is changed.
         """
         self.damping = np.zeros((6, 6))
-        self._update_damping()
+        self._update_translational_damping()
         self.damping[-3:, -3:] = 2 * np.sqrt(self.stiffness[-3:, -3:] * np.diag(self.mover_inertia))
 
-    def _update_damping(self, additional_mass: float = 0.0) -> None:
+    def _update_translational_damping(self, additional_mass: float = 0.0) -> None:
         """Update the mass-dependent (translational) part of the damping matrix (damping ratio = 1) based on the current stiffness
         matrix.
 
@@ -204,7 +204,7 @@ class MoverImpedanceController:
         quat_d = quat_d.astype(np.float64)
 
         # update damping if required
-        self._update_damping(additional_mass=additional_mass)
+        self._update_translational_damping(additional_mass=additional_mass)
 
         # desired rot mat
         xmat_d = np.zeros((9,))
