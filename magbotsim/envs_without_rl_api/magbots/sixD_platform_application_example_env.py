@@ -311,7 +311,7 @@ if __name__ == '__main__':
     num_cycles = 5
     cnt = 0
     err_scale_xy_fast = np.array([2.0, 2.0, 1.0, 1.0, 1.0, 1.0])
-    err_scale_xyc_fast = np.array([2.0, 2.0, 1.0, 1.0, 1.0, 6.0])
+    err_scale_xyc_fast = np.array([2.0, 2.0, 1.0, 1.0, 1.0, 0.6])
     env.impedance_controllers[0].set_pose_err_scale(err_scale_xy_fast)
     env.impedance_controllers[1].set_pose_err_scale(err_scale_xy_fast)
     e_threshold = 1e-2
