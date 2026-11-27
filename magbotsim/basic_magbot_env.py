@@ -244,7 +244,16 @@ class BasicMagBotEnv:
         # precomputed wall-segment lookup table for qpos_is_valid
         self.walls_per_tile, self.n_walls_per_tile = self._precompute_wall_segments_fast()
         # positions at which a full 360° rotation of a mover is possible (rotation limitations)
-        self.rotation_points = self.get_tile_rotation_points() if rotation_points is None else rotation_points
+        if rotation_points is not None:
+            rotation_points = np.asarray(rotation_points, dtype=np.float64)
+            if rotation_points.size == 0:
+                rotation_points = rotation_points.reshape((0, 2))
+            assert rotation_points.ndim == 2 and rotation_points.shape[1] == 2, (
+                f'rotation_points must be a numpy array of shape (num_points,2), got shape {rotation_points.shape}.'
+            )
+            self.rotation_points = rotation_points
+        else:
+            self.rotation_points = self.get_tile_rotation_points()
 
         # mover configuration
         self.num_movers = num_movers
@@ -687,26 +696,6 @@ class BasicMagBotEnv:
 
         # without rotation points, np.any over the empty axis returns False for all positions
         return np.any(dist_sq <= tol**2, axis=1)
-
-    @property
-    def rotation_points(self) -> np.ndarray:
-        """The (x,y) positions at which a full 360° rotation of a mover is possible, as a numpy array of shape (num_points,2).
-        These points are used by ``check_mover_rotation()`` and ``full_rotation_possible()``. By default, the points returned by
-        ``get_tile_rotation_points()`` are used, which model one possible rotation limitation. To model a different limitation,
-        assign arbitrary points, e.g. ``env.rotation_points = np.array([[0.36, 0.36], [0.5, 0.42]])``. If no points are
-        specified (empty array), a full rotation is not possible anywhere.
-        """
-        return self._rotation_points
-
-    @rotation_points.setter
-    def rotation_points(self, rotation_points: np.ndarray) -> None:
-        rotation_points = np.asarray(rotation_points, dtype=np.float64)
-        if rotation_points.size == 0:
-            rotation_points = rotation_points.reshape((0, 2))
-        assert rotation_points.ndim == 2 and rotation_points.shape[1] == 2, (
-            f'rotation_points must be a numpy array of shape (num_points,2), got shape {rotation_points.shape}.'
-        )
-        self._rotation_points = rotation_points
 
     def qpos_is_valid(self, qpos: np.ndarray, c_size: float | np.ndarray, add_safety_offset: bool = False) -> np.ndarray:
         """Check whether qpos is valid. This method considers the edges as imaginary walls if there is no other tile next to that
